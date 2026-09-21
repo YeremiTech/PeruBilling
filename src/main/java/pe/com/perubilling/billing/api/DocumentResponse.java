@@ -1,0 +1,53 @@
+package pe.com.perubilling.billing.api;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.UUID;
+import io.swagger.v3.oas.annotations.media.Schema;
+import pe.com.perubilling.billing.domain.DeliveryChannel;
+import pe.com.perubilling.billing.domain.DeliveryStatus;
+import pe.com.perubilling.billing.domain.DocumentStatus;
+import pe.com.perubilling.shared.domain.DocumentType;
+
+@Schema(description = "Estado y totales del comprobante electrónico")
+public record DocumentResponse(
+        UUID id,
+        UUID issuerId,
+        String externalId,
+        DocumentType documentType,
+        String number,
+        String operationType,
+        CustomerResponse customer,
+        LocalDate issueDate,
+        LocalTime issueTime,
+        String currency,
+        DocumentStatus status,
+        BigDecimal taxableAmount,
+        BigDecimal ivapTaxableAmount,
+        BigDecimal exoneratedAmount,
+        BigDecimal unaffectedAmount,
+        BigDecimal exportAmount,
+        BigDecimal freeAmount,
+        BigDecimal igvAmount,
+        BigDecimal ivapAmount,
+        BigDecimal freeTaxAmount,
+        BigDecimal icbperAmount,
+        BigDecimal allowanceTotalAmount,
+        BigDecimal chargeTotalAmount,
+        BigDecimal totalAmount,
+        PaymentResponse payment,
+        String cdrCode,
+        String cdrDescription,
+        String lastErrorCode,
+        String lastErrorMessage,
+        DeliveryStatus deliveryStatus,
+        DeliveryChannel grantedChannel,
+        Instant grantedAt,
+        Instant createdAt,
+        Instant acceptedAt,
+        List<AllowanceChargeResponse> adjustments,
+        List<DocumentItemResponse> items
+) {}

@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "rulesBaseline": "2026-08-26",
+  "environment": "BETA",
+  "cases": [
+    {
+      "id": "invoice-0101-taxed-cash",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0101-credit-installments",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0102-export",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0102",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "receipt-0101-taxed",
+      "releaseRequired": true,
+      "documentType": "03",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "credit-note-0101",
+      "releaseRequired": true,
+      "documentType": "07",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "debit-note-0101",
+      "releaseRequired": true,
+      "documentType": "08",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0101-exonerated",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0101-unaffected",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0101-free",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0107-ivap",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0107",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-0101-icbper",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-line-discount-00",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-line-charge-48",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-global-discount-03",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-global-charge-50",
+      "releaseRequired": true,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "daily-summary-receipt",
+      "releaseRequired": true,
+      "documentType": "RC",
+      "operationType": "SUMMARY",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "voiding-communication-invoice",
+      "releaseRequired": true,
+      "documentType": "RA",
+      "operationType": "VOIDING",
+      "expectedOutcomes": [
+        "ACCEPTED",
+        "OBSERVED"
+      ]
+    },
+    {
+      "id": "invoice-invalid-customer-rejected",
+      "releaseRequired": false,
+      "documentType": "01",
+      "operationType": "0101",
+      "expectedOutcomes": [
+        "REJECTED"
+      ]
+    }
+  ]
+}

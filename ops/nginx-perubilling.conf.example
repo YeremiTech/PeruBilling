@@ -1,0 +1,52 @@
+# Ejemplo de reverse proxy. Ajustar DNS, certificados y red interna antes de producción.
+# El rate limit per-IP complementa el lockout de usuario y las API Keys; no sustituye WAF/edge controls.
+
+limit_req_zone $binary_remote_addr zone=perubilling_login:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=perubilling_public:10m rate=60r/m;
+limit_req_zone $binary_remote_addr zone=perubilling_api:20m rate=120r/s;
+
+upstream perubilling_backend {
+    server perubilling:8080;
+    keepalive 32;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name billing.example.com;
+
+    ssl_certificate     /etc/nginx/tls/fullchain.pem;
+    ssl_certificate_key /etc/nginx/tls/privkey.pem;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+
+    client_max_body_size 12m;
+
+    location = /api/v1/auth/login {
+        limit_req zone=perubilling_login burst=3 nodelay;
+        proxy_pass http://perubilling_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location ^~ /public/v1/ {
+        limit_req zone=perubilling_public burst=20 nodelay;
+        proxy_pass http://perubilling_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location ^~ /api/ {
+        limit_req zone=perubilling_api burst=250 nodelay;
+        proxy_pass http://perubilling_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location /actuator/health {
+        proxy_pass http://perubilling_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location / {
+        return 404;
+    }
+}

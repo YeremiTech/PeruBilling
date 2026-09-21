@@ -43,17 +43,17 @@ POS / ERP / Ecommerce
         |
         | HTTPS + API Key
         v
-+----------------------------+
++-----------------------------+
 |        PeruBilling          |
-|----------------------------|
+|-----------------------------|
 | identity / access-control   |
 | tenant / issuer             |
 | billing / taxation          |
-| cpe / ubl / signature      |
+| cpe / ubl / signature       |
 | summary                     |
 | sunat                       |
 | webhook / audit             |
-+-------------+--------------+
++-------------+---------------+
               |
        +------+-------+
        |              |

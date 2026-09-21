@@ -10,8 +10,6 @@ API modular de facturación electrónica para Perú orientada a integración con
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-Swagger-85EA2D?style=flat&logo=swagger&logoColor=black)](https://www.openapis.org/)
 [![SUNAT](https://img.shields.io/badge/SUNAT-UBL%202.1-005DAA?style=flat)](https://cpe.sunat.gob.pe/)
-[![CI](https://github.com/YeremiTech/PeruBilling/actions/workflows/ci.yml/badge.svg)](https://github.com/YeremiTech/PeruBilling/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/YeremiTech/PeruBilling/actions/workflows/codeql.yml/badge.svg)](https://github.com/YeremiTech/PeruBilling/actions/workflows/codeql.yml)
 ![Status](https://img.shields.io/badge/status-preproduction-orange?style=flat)
 
 El proyecto está planteado como un **monolito modular**: mantiene un despliegue simple, pero separa seguridad, emisores, facturación, CPE, SUNAT, Resumen Diario, webhooks y auditoría para poder evolucionar sin convertir el dominio tributario en un CRUD acoplado.

@@ -258,7 +258,7 @@ for script in scripts/*.sh; do
 done
 
 echo "Shell gate OK."
-./scripts/test-operational-scripts.sh
+bash ./scripts/test-operational-scripts.sh
 
 if [[ "$STATIC_ONLY" == "true" ]]; then
   echo "Static-only gate complete."
@@ -272,4 +272,4 @@ if [[ -z "$java_major" || "$java_major" -lt 25 ]]; then
 fi
 
 echo "Ejecutando Maven verify con JDK ${java_major}..."
-./mvnw -B -ntp verify
+sh ./mvnw -B -ntp verify

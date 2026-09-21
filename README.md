@@ -2,6 +2,18 @@
 
 API modular de facturación electrónica para Perú orientada a integración con POS, ERP, ecommerce y sistemas de ventas. Versión de trabajo: `0.8.0-SNAPSHOT`.
 
+[![Java](https://img.shields.io/badge/Java-25-ED8B00?style=flat&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?style=flat&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Maven](https://img.shields.io/badge/Maven-3.9.16-C71A36?style=flat&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
+[![Flyway](https://img.shields.io/badge/Flyway-Migrations-CC0200?style=flat&logo=flyway&logoColor=white)](https://documentation.red-gate.com/flyway)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-Swagger-85EA2D?style=flat&logo=swagger&logoColor=black)](https://www.openapis.org/)
+[![SUNAT](https://img.shields.io/badge/SUNAT-UBL%202.1-005DAA?style=flat)](https://cpe.sunat.gob.pe/)
+[![CI](https://github.com/YeremiTech/PeruBilling/actions/workflows/ci.yml/badge.svg)](https://github.com/YeremiTech/PeruBilling/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/YeremiTech/PeruBilling/actions/workflows/codeql.yml/badge.svg)](https://github.com/YeremiTech/PeruBilling/actions/workflows/codeql.yml)
+![Status](https://img.shields.io/badge/status-preproduction-orange?style=flat)
+
 El proyecto está planteado como un **monolito modular**: mantiene un despliegue simple, pero separa seguridad, emisores, facturación, CPE, SUNAT, Resumen Diario, webhooks y auditoría para poder evolucionar sin convertir el dominio tributario en un CRUD acoplado.
 
 ## Alcance implementado
@@ -199,6 +211,7 @@ DOCUMENT_READ
 DOCUMENT_WRITE
 ISSUER_READ
 WEBHOOK_WRITE
+OPERATIONS_READ
 ```
 
 ## Flujo mínimo de configuración
@@ -597,6 +610,12 @@ src/main/resources/db/migration/V5__audit_immutability.sql
 src/main/resources/db/migration/V6__phase2_reliability_and_delivery.sql
 src/main/resources/db/migration/V7__issuer_establishment_code.sql
 src/main/resources/db/migration/V8__document_issue_time.sql
+src/main/resources/db/migration/V9__api_integration_hardening.sql
+src/main/resources/db/migration/V10__line_allowances_charges_and_sunat_catalogs.sql
+src/main/resources/db/migration/V11__global_adjustments_and_catalog53_correction.sql
+src/main/resources/db/migration/V12__database_artifact_storage.sql
+src/main/resources/db/migration/V13__product_classification_codes.sql
+src/main/resources/db/migration/V14__export_customer_country.sql
 ```
 
 Hibernate usa:

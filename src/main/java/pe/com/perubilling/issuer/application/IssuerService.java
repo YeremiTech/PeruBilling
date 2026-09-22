@@ -1,8 +1,13 @@
 package pe.com.perubilling.issuer.application;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Collection;
@@ -68,7 +73,7 @@ public class IssuerService {
         entity.setProvince(trimToNull(request.province()));
         entity.setDistrict(trimToNull(request.district()));
         if (request.environment() != null) entity.setSunatEnvironment(request.environment());
-        return toResponse(issuers.save(entity));
+        return toResponse(issuers.saveAndFlush(entity));
     }
 
     @Transactional(readOnly = true)
@@ -85,7 +90,7 @@ public class IssuerService {
     public IssuerResponse setActive(UUID issuerId, boolean active) {
         IssuerEntity issuer = requireEntity(issuerId);
         issuer.setActive(active);
-        return toResponse(issuer);
+        return toResponse(issuers.saveAndFlush(issuer));
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +105,7 @@ public class IssuerService {
         issuer.setSolUser(request.user().trim().toUpperCase(Locale.ROOT));
         issuer.setSolPasswordEncrypted(crypto.encrypt(request.password()));
         issuer.setSunatEnvironment(request.environment());
-        return toResponse(issuer);
+        return toResponse(issuers.saveAndFlush(issuer));
     }
 
     @Transactional
@@ -114,7 +119,7 @@ public class IssuerService {
         entity.setDocumentType(request.documentType());
         entity.setSeries(series);
         entity.setCurrentValue(request.startAt() - 1);
-        return toSeries(seriesRepository.save(entity));
+        return toSeries(seriesRepository.saveAndFlush(entity));
     }
 
     @Transactional(readOnly = true)
@@ -127,51 +132,59 @@ public class IssuerService {
     @Transactional
     public SeriesResponse setSeriesActive(UUID issuerId, UUID seriesId, boolean active) {
         IssuerEntity issuer = requireEntity(issuerId);
-        DocumentSeriesEntity series = seriesRepository.findByIdAndTenantIdAndIssuerId(seriesId, issuer.getTenantId(), issuerId)
+        DocumentSeriesEntity series = seriesRepository.findByIdAndTenantIdAndIssuerId(
+                        seriesId, issuer.getTenantId(), issuerId)
                 .orElseThrow(() -> BusinessException.notFound("SERIES_NOT_FOUND", "Serie no encontrada"));
         series.setActive(active);
-        return toSeries(series);
+        return toSeries(seriesRepository.saveAndFlush(series));
     }
 
     @Transactional
     public CertificateResponse uploadCertificate(UUID issuerId, MultipartFile file, String password, String requestedAlias) {
         IssuerEntity issuer = requireEntity(issuerId);
-        try {
-            if (file == null || file.isEmpty()) throw BusinessException.badRequest("EMPTY_CERTIFICATE", "Debe adjuntar un certificado PKCS#12");
-            if (file.getSize() > 5L * 1024 * 1024) throw BusinessException.badRequest("CERTIFICATE_TOO_LARGE", "El certificado supera 5 MB");
-            byte[] pfx = file.getBytes();
-            KeyStore keyStore = KeyStore.getInstance("PKCS12");
-            keyStore.load(new ByteArrayInputStream(pfx), password.toCharArray());
-            String alias = selectAlias(keyStore, requestedAlias);
-            if (!keyStore.isKeyEntry(alias)) throw BusinessException.badRequest("INVALID_CERTIFICATE", "El alias seleccionado no contiene una clave privada");
-            X509Certificate x509 = (X509Certificate) keyStore.getCertificate(alias);
-            if (x509 == null) throw BusinessException.badRequest("INVALID_CERTIFICATE", "No se encontró certificado X509");
-            x509.checkValidity();
-            validateCertificateIdentity(issuer, x509);
-            String fingerprint = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(x509.getEncoded()));
-
-            var previous = certificates.findAllByTenantIdAndIssuerIdOrderByCreatedAtDesc(issuer.getTenantId(), issuerId);
-            previous.forEach(c -> c.setActive(false));
-            certificates.saveAll(previous);
-
-            DigitalCertificateEntity entity = new DigitalCertificateEntity();
-            entity.setTenantId(issuer.getTenantId());
-            entity.setIssuerId(issuerId);
-            entity.setCertificateAlias(alias);
-            entity.setEncryptedPfx(crypto.encryptBytes(pfx));
-            entity.setPasswordEncrypted(crypto.encrypt(password));
-            entity.setFingerprint(fingerprint);
-            entity.setSubjectDn(x509.getSubjectX500Principal().getName());
-            entity.setSerialNumber(x509.getSerialNumber().toString(16));
-            entity.setValidFrom(x509.getNotBefore().toInstant());
-            entity.setValidUntil(x509.getNotAfter().toInstant());
-            entity.setActive(true);
-            return toCertificate(certificates.save(entity));
-        } catch (BusinessException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw BusinessException.badRequest("INVALID_CERTIFICATE", "No se pudo abrir el PKCS#12 con la contraseña indicada");
+        if (file == null || file.isEmpty()) {
+            throw BusinessException.badRequest("EMPTY_CERTIFICATE", "Debe adjuntar un certificado PKCS#12");
         }
+        if (file.getSize() > 5L * 1024 * 1024) {
+            throw BusinessException.badRequest("CERTIFICATE_TOO_LARGE", "El certificado supera 5 MB");
+        }
+        if (password == null || password.isBlank()) {
+            throw BusinessException.badRequest("CERTIFICATE_PASSWORD_REQUIRED", "La contraseña del PKCS#12 es obligatoria");
+        }
+
+        byte[] pfx = readCertificateBytes(file);
+        KeyStore keyStore = loadPkcs12(pfx, password);
+        String alias = selectAlias(keyStore, requestedAlias);
+        X509Certificate x509 = certificateFrom(keyStore, alias);
+        validateCertificateValidity(x509);
+        validateCertificateIdentity(issuer, x509);
+        String fingerprint = certificateFingerprint(x509);
+
+        if (certificates.existsByTenantIdAndIssuerIdAndFingerprint(
+                issuer.getTenantId(), issuerId, fingerprint)) {
+            throw BusinessException.conflict(
+                    "CERTIFICATE_ALREADY_EXISTS",
+                    "El certificado ya está registrado para este emisor");
+        }
+
+        var previous = certificates.findAllByTenantIdAndIssuerIdOrderByCreatedAtDesc(
+                issuer.getTenantId(), issuerId);
+        previous.forEach(certificate -> certificate.setActive(false));
+        certificates.saveAllAndFlush(previous);
+
+        DigitalCertificateEntity entity = new DigitalCertificateEntity();
+        entity.setTenantId(issuer.getTenantId());
+        entity.setIssuerId(issuerId);
+        entity.setCertificateAlias(alias);
+        entity.setEncryptedPfx(crypto.encryptBytes(pfx));
+        entity.setPasswordEncrypted(crypto.encrypt(password));
+        entity.setFingerprint(fingerprint);
+        entity.setSubjectDn(x509.getSubjectX500Principal().getName());
+        entity.setSerialNumber(x509.getSerialNumber().toString(16));
+        entity.setValidFrom(x509.getNotBefore().toInstant());
+        entity.setValidUntil(x509.getNotAfter().toInstant());
+        entity.setActive(true);
+        return toCertificate(certificates.saveAndFlush(entity));
     }
 
     @Transactional(readOnly = true)
@@ -191,7 +204,7 @@ public class IssuerService {
         }
         var all = certificates.findAllByTenantIdAndIssuerIdOrderByCreatedAtDesc(issuer.getTenantId(), issuerId);
         all.forEach(value -> value.setActive(value.getId().equals(certificateId)));
-        certificates.saveAll(all);
+        certificates.saveAllAndFlush(all);
         return toCertificate(selected);
     }
 
@@ -201,7 +214,7 @@ public class IssuerService {
         DigitalCertificateEntity selected = certificates.findByIdAndTenantIdAndIssuerId(certificateId, issuer.getTenantId(), issuerId)
                 .orElseThrow(() -> BusinessException.notFound("CERTIFICATE_NOT_FOUND", "Certificado no encontrado"));
         selected.setActive(false);
-        return toCertificate(selected);
+        return toCertificate(certificates.saveAndFlush(selected));
     }
 
     public DigitalCertificateEntity requireActiveCertificate(UUID tenantId, UUID issuerId) {
@@ -210,16 +223,117 @@ public class IssuerService {
                 .orElseThrow(() -> BusinessException.badRequest("CERTIFICATE_REQUIRED", "El emisor no tiene un certificado digital activo y vigente"));
     }
 
+    private byte[] readCertificateBytes(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException ex) {
+            throw BusinessException.badRequest(
+                    "CERTIFICATE_READ_ERROR",
+                    "No se pudo leer el archivo PKCS#12 recibido");
+        }
+    }
 
-    private void validateCertificateIdentity(IssuerEntity issuer, X509Certificate certificate) throws Exception {
-        if (issuer.getSunatEnvironment() != SunatEnvironment.PRODUCTION) return;
+    private KeyStore loadPkcs12(byte[] pfx, String password) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(new ByteArrayInputStream(pfx), password.toCharArray());
+            return keyStore;
+        } catch (IOException ex) {
+            if (isPasswordFailure(ex)) {
+                throw BusinessException.badRequest(
+                        "CERTIFICATE_PASSWORD_INVALID",
+                        "La contraseña del PKCS#12 es incorrecta");
+            }
+            throw BusinessException.badRequest(
+                    "INVALID_CERTIFICATE",
+                    "El archivo no contiene un PKCS#12 válido");
+        } catch (GeneralSecurityException ex) {
+            throw BusinessException.badRequest(
+                    "INVALID_CERTIFICATE",
+                    "El archivo no contiene un PKCS#12 válido");
+        }
+    }
+
+    private boolean isPasswordFailure(Throwable throwable) {
+        Throwable current = throwable;
+        int depth = 0;
+        while (current != null && depth++ < 8) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(Locale.ROOT);
+                if (normalized.contains("password") || normalized.contains("contraseña")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private X509Certificate certificateFrom(KeyStore keyStore, String alias) {
+        try {
+            if (!keyStore.isKeyEntry(alias)) {
+                throw BusinessException.badRequest(
+                        "PRIVATE_KEY_NOT_FOUND",
+                        "El alias seleccionado no contiene una clave privada");
+            }
+            var certificate = keyStore.getCertificate(alias);
+            if (!(certificate instanceof X509Certificate x509)) {
+                throw BusinessException.badRequest(
+                        "INVALID_CERTIFICATE",
+                        "El alias seleccionado no contiene un certificado X.509");
+            }
+            return x509;
+        } catch (java.security.KeyStoreException ex) {
+            throw BusinessException.badRequest(
+                    "INVALID_CERTIFICATE",
+                    "No se pudo leer el certificado X.509 del PKCS#12");
+        }
+    }
+
+    private void validateCertificateValidity(X509Certificate certificate) {
+        try {
+            certificate.checkValidity();
+        } catch (CertificateExpiredException ex) {
+            throw BusinessException.badRequest(
+                    "CERTIFICATE_EXPIRED",
+                    "El certificado digital está vencido");
+        } catch (CertificateNotYetValidException ex) {
+            throw BusinessException.badRequest(
+                    "CERTIFICATE_NOT_YET_VALID",
+                    "El certificado digital todavía no está vigente");
+        }
+    }
+
+    private String certificateFingerprint(X509Certificate certificate) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(certificate.getEncoded()));
+        } catch (GeneralSecurityException ex) {
+            throw new IllegalStateException("No se pudo calcular el fingerprint del certificado", ex);
+        }
+    }
+
+
+    private void validateCertificateIdentity(IssuerEntity issuer, X509Certificate certificate) {
+        if (issuer.getSunatEnvironment() != SunatEnvironment.PRODUCTION) {
+            return;
+        }
 
         StringBuilder identity = new StringBuilder(certificate.getSubjectX500Principal().getName());
-        Collection<List<?>> altNames = certificate.getSubjectAlternativeNames();
-        if (altNames != null) {
-            for (List<?> alt : altNames) {
-                if (alt.size() > 1 && alt.get(1) != null) identity.append(' ').append(alt.get(1));
+        try {
+            Collection<List<?>> altNames = certificate.getSubjectAlternativeNames();
+            if (altNames != null) {
+                for (List<?> alt : altNames) {
+                    if (alt.size() > 1 && alt.get(1) != null) {
+                        identity.append(' ').append(alt.get(1));
+                    }
+                }
             }
+        } catch (CertificateParsingException ex) {
+            throw BusinessException.badRequest(
+                    "INVALID_CERTIFICATE",
+                    "No se pudo interpretar la identidad X.509 del certificado");
         }
 
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?<!\\d)\\d{11}(?!\\d)")
@@ -228,7 +342,9 @@ public class IssuerService {
         boolean foundIssuerRuc = false;
         while (matcher.find()) {
             foundAnyRuc = true;
-            if (issuer.getRuc().equals(matcher.group())) foundIssuerRuc = true;
+            if (issuer.getRuc().equals(matcher.group())) {
+                foundIssuerRuc = true;
+            }
         }
         if (!foundIssuerRuc) {
             throw BusinessException.badRequest(
@@ -239,17 +355,31 @@ public class IssuerService {
         }
     }
 
-    private String selectAlias(KeyStore keyStore, String requestedAlias) throws Exception {
-        if (requestedAlias != null && !requestedAlias.isBlank()) {
-            if (!keyStore.containsAlias(requestedAlias)) throw BusinessException.badRequest("CERTIFICATE_ALIAS_NOT_FOUND", "El alias solicitado no existe en el PKCS#12");
-            return requestedAlias;
+    private String selectAlias(KeyStore keyStore, String requestedAlias) {
+        try {
+            if (requestedAlias != null && !requestedAlias.isBlank()) {
+                if (!keyStore.containsAlias(requestedAlias)) {
+                    throw BusinessException.badRequest(
+                            "CERTIFICATE_ALIAS_NOT_FOUND",
+                            "El alias solicitado no existe en el PKCS#12");
+                }
+                return requestedAlias;
+            }
+            Enumeration<String> aliases = keyStore.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                if (keyStore.isKeyEntry(alias)) {
+                    return alias;
+                }
+            }
+            throw BusinessException.badRequest(
+                    "PRIVATE_KEY_NOT_FOUND",
+                    "El PKCS#12 no contiene una clave privada");
+        } catch (java.security.KeyStoreException ex) {
+            throw BusinessException.badRequest(
+                    "INVALID_CERTIFICATE",
+                    "No se pudo inspeccionar el contenido del PKCS#12");
         }
-        Enumeration<String> aliases = keyStore.aliases();
-        while (aliases.hasMoreElements()) {
-            String alias = aliases.nextElement();
-            if (keyStore.isKeyEntry(alias)) return alias;
-        }
-        throw BusinessException.badRequest("PRIVATE_KEY_NOT_FOUND", "El PKCS#12 no contiene una clave privada");
     }
 
     private void validateSeriesType(pe.com.perubilling.shared.domain.DocumentType type, String series) {

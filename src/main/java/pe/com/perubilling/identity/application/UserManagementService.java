@@ -86,7 +86,7 @@ public class UserManagementService {
     public void changeOwnPassword(ChangePasswordRequest request) {
         UUID tenantId=tenant.requireTenantId();
         UUID userId=tenant.currentUserIdOrNull();
-        if (userId==null) throw new BusinessException(org.springframework.http.HttpStatus.UNAUTHORIZED,"USER_AUTH_REQUIRED","Se requiere autenticación de usuario");
+        if (userId==null) throw BusinessException.unauthorized("USER_AUTH_REQUIRED", "Se requiere autenticación de usuario");
         UserAccountEntity user=users.findByIdAndTenantId(userId,tenantId)
                 .orElseThrow(()->BusinessException.notFound("USER_NOT_FOUND","Usuario no encontrado"));
         if (!passwords.matches(request.currentPassword(),user.getPasswordHash())) {

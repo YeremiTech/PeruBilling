@@ -121,7 +121,9 @@ public class SecurityConfig {
             HttpSecurity http,
             ApiKeyAuthenticationFilter apiKeyFilter,
             RequestContextFilter requestContextFilter,
-            JwtAccountAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+            JwtAccountAuthenticationConverter jwtAuthenticationConverter,
+            ApiAuthenticationEntryPoint authenticationEntryPoint,
+            ApiAccessDeniedHandler accessDeniedHandler) throws Exception {
         return http
                 .securityMatcher(EndpointRequest.toAnyEndpoint())
                 .csrf(csrf -> csrf.disable())
@@ -130,6 +132,9 @@ public class SecurityConfig {
                         .requestMatchers(EndpointRequest.to("health")).permitAll()
                         .anyRequest().hasAnyAuthority("ROLE_ADMIN", "SCOPE_OPERATIONS_READ"))
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .addFilterBefore(apiKeyFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterBefore(requestContextFilter, ApiKeyAuthenticationFilter.class)
                 .headers(headers -> headers
@@ -145,7 +150,9 @@ public class SecurityConfig {
             ApiKeyAuthenticationFilter apiKeyFilter,
             AuditRequestFilter auditFilter,
             RequestContextFilter requestContextFilter,
-            JwtAccountAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+            JwtAccountAuthenticationConverter jwtAuthenticationConverter,
+            ApiAuthenticationEntryPoint authenticationEntryPoint,
+            ApiAccessDeniedHandler accessDeniedHandler) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -160,6 +167,9 @@ public class SecurityConfig {
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .addFilterBefore(apiKeyFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterBefore(requestContextFilter, ApiKeyAuthenticationFilter.class)
                 .addFilterAfter(auditFilter, ApiKeyAuthenticationFilter.class)

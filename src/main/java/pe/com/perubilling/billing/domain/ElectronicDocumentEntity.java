@@ -73,6 +73,7 @@ public class ElectronicDocumentEntity extends BaseEntity {
     @Column(name = "xml_path", length = 1000) private String xmlPath;
     @Column(name = "signed_xml_path", length = 1000) private String signedXmlPath;
     @Column(name = "pdf_path", length = 1000) private String pdfPath;
+    @Column(name = "thermal_pdf_path", length = 1000) private String thermalPdfPath;
     @Column(name = "cdr_path", length = 1000) private String cdrPath;
     @Column(name = "xml_hash", length = 64) private String xmlHash;
     @Column(name = "cdr_code", length = 20) private String cdrCode;
@@ -137,6 +138,7 @@ public class ElectronicDocumentEntity extends BaseEntity {
     public String getXmlPath() { return xmlPath; } public void setXmlPath(String v) { xmlPath=v; }
     public String getSignedXmlPath() { return signedXmlPath; } public void setSignedXmlPath(String v) { signedXmlPath=v; }
     public String getPdfPath() { return pdfPath; } public void setPdfPath(String v) { pdfPath=v; }
+    public String getThermalPdfPath() { return thermalPdfPath; } public void setThermalPdfPath(String v) { thermalPdfPath=v; }
     public String getCdrPath() { return cdrPath; } public void setCdrPath(String v) { cdrPath=v; }
     public String getXmlHash() { return xmlHash; } public void setXmlHash(String v) { xmlHash=v; }
     public String getCdrCode() { return cdrCode; } public void setCdrCode(String v) { cdrCode=v; }

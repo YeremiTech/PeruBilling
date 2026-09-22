@@ -1,4 +1,4 @@
-# Evidencia SUNAT BETA — Phase 10
+# Evidencia SUNAT BETA
 
 Este directorio conserva evidencia **real** de ejecución contra SUNAT BETA. No se incluyen XML/CDR ficticios porque una release no debe declararse certificada sin respuesta auténtica de SUNAT.
 

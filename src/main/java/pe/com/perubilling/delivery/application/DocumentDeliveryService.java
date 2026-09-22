@@ -16,6 +16,7 @@ import pe.com.perubilling.billing.domain.DeliveryChannel;
 import pe.com.perubilling.billing.domain.DeliveryStatus;
 import pe.com.perubilling.delivery.domain.DocumentAccessTokenEntity;
 import pe.com.perubilling.delivery.infrastructure.DocumentAccessTokenRepository;
+import pe.com.perubilling.shared.domain.DocumentPdfLayout;
 import pe.com.perubilling.issuer.infrastructure.IssuerRepository;
 import pe.com.perubilling.shared.crypto.HashingService;
 import pe.com.perubilling.shared.domain.BusinessException;
@@ -110,11 +111,24 @@ public class DocumentDeliveryService {
 
     @Transactional
     public PublicArtifact download(String token, String type) {
+        return download(token, type, DocumentPdfLayout.A4);
+    }
+
+    @Transactional
+    public PublicArtifact download(String token, String type, DocumentPdfLayout layout) {
         var resolved=resolve(token);
         var document=resolved.document();
         String path; String mediaType; String filename;
         if("pdf".equals(type)) {
-            path=document.getPdfPath(); mediaType="application/pdf"; filename=document.getFullNumber()+".pdf";
+            DocumentPdfLayout safeLayout = layout == null ? DocumentPdfLayout.A4 : layout;
+            if (safeLayout == DocumentPdfLayout.THERMAL_80) {
+                path=document.getThermalPdfPath();
+                filename=document.getFullNumber()+"-thermal-80.pdf";
+            } else {
+                path=document.getPdfPath();
+                filename=document.getFullNumber()+".pdf";
+            }
+            mediaType="application/pdf";
         } else if("xml".equals(type)) {
             path=document.getSignedXmlPath()!=null?document.getSignedXmlPath():document.getXmlPath();
             mediaType="application/xml"; filename=document.getFullNumber()+".xml";

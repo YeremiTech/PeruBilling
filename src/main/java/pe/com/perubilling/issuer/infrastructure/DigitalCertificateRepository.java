@@ -17,4 +17,7 @@ public interface DigitalCertificateRepository extends JpaRepository<DigitalCerti
 
     Optional<DigitalCertificateEntity> findByIdAndTenantIdAndIssuerId(
             UUID id, UUID tenantId, UUID issuerId);
+
+    boolean existsByTenantIdAndIssuerIdAndFingerprint(
+            UUID tenantId, UUID issuerId, String fingerprint);
 }

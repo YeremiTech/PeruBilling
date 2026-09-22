@@ -12,6 +12,7 @@ import pe.com.perubilling.billing.infrastructure.ElectronicDocumentRepository;
 import pe.com.perubilling.billing.infrastructure.PaymentInstallmentRepository;
 import pe.com.perubilling.cpe.domain.DocumentBundle;
 import pe.com.perubilling.cpe.pdf.DocumentPdfGenerator;
+import pe.com.perubilling.shared.domain.DocumentPdfLayout;
 import pe.com.perubilling.cpe.signature.XmlDocumentSigner;
 import pe.com.perubilling.cpe.signature.XmlSignatureVerifier;
 import pe.com.perubilling.cpe.ubl.UblGenerator;
@@ -165,9 +166,14 @@ public class DocumentProcessor {
                     document.getTenantId(), documentId, baseName + "-signed.xml", signedXml);
             String xmlHash = hashing.sha256(signedXml);
             var publicLink = delivery.createProcessingAccessLink(document.getTenantId(), documentId);
-            byte[] pdf = pdfGenerator.generate(bundle, signedXml, publicLink.url());
+            byte[] pdf = pdfGenerator.generate(bundle, signedXml, publicLink.url(), DocumentPdfLayout.A4);
             String pdfPath = storage.store(document.getTenantId(), documentId, baseName + ".pdf", pdf);
-            transitions.saveArtifacts(documentId, xmlPath, signedPath, pdfPath, xmlHash);
+            byte[] thermalPdf = pdfGenerator.generate(
+                    bundle, signedXml, publicLink.url(), DocumentPdfLayout.THERMAL_80);
+            String thermalPdfPath = storage.store(
+                    document.getTenantId(), documentId, baseName + "-thermal-80.pdf", thermalPdf);
+            transitions.saveArtifacts(
+                    documentId, xmlPath, signedPath, pdfPath, thermalPdfPath, xmlHash);
 
             if (requiresDailySummary(document)) {
                 transitions.markSummaryReady(documentId, attempt);

@@ -20,7 +20,13 @@ import sys
 root = Path('.')
 errors = []
 
-# Flyway debe permanecer contiguo para que una fase nunca salte una migración esperada.
+# Los scripts ejecutables Unix deben conservar LF para funcionar en Linux y contenedores.
+unix_scripts = [root / 'mvnw', *(root / 'scripts').glob('*.sh')]
+for path in unix_scripts:
+    if path.is_file() and b'\r\n' in path.read_bytes():
+        errors.append(f'Finales CRLF no permitidos en script Unix: {path}')
+
+# Flyway debe permanecer contiguo para que una release nunca salte una migración esperada.
 migrations = list((root / 'src/main/resources/db/migration').glob('V*__*.sql'))
 versions = []
 for path in migrations:

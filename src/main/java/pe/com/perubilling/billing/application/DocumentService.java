@@ -279,12 +279,17 @@ public class DocumentService {
                         : "Documento creado y encolado para procesamiento");
 
         if (normalizedKey != null) {
+            // idempotency_record tiene FK hacia electronic_document mediante UUIDs escalares.
+            // Forzamos primero el flush del agregado para que PostgreSQL vea el recurso padre
+            // antes de insertar el registro idempotente (especialmente importante con Hibernate 7).
+            documents.flush();
+
             IdempotencyRecordEntity record = new IdempotencyRecordEntity();
             record.setTenantId(tenantId);
             record.setIdempotencyKey(normalizedKey);
             record.setRequestHash(requestHash);
             record.setResourceId(entity.getId());
-            idempotency.save(record);
+            idempotency.saveAndFlush(record);
         }
 
         return toResponse(entity, loadItems(entity), loadInstallments(entity));

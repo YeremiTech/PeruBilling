@@ -4,9 +4,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pe.com.perubilling.billing.domain.DocumentStatus;
@@ -15,6 +17,11 @@ import pe.com.perubilling.billing.domain.ElectronicDocumentEntity;
 
 public interface ElectronicDocumentRepository extends JpaRepository<ElectronicDocumentEntity, UUID> {
     Optional<ElectronicDocumentEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from ElectronicDocumentEntity d where d.id = :id and d.tenantId = :tenantId")
+    Optional<ElectronicDocumentEntity> findByIdAndTenantIdForUpdate(
+            @Param("id") UUID id, @Param("tenantId") UUID tenantId);
     Optional<ElectronicDocumentEntity> findByTenantIdAndIssuerIdAndDocumentTypeAndFullNumber(
             UUID tenantId, UUID issuerId, DocumentType documentType, String fullNumber);
     Optional<ElectronicDocumentEntity> findByTenantIdAndIssuerIdAndExternalId(

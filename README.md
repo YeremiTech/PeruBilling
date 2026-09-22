@@ -35,7 +35,7 @@ El proyecto está planteado como un **monolito modular**: mantiene un despliegue
 - Resumen Diario UBL 2.0 para boletas y notas vinculadas a boletas, con `sendSummary` + ticket + `getStatus` y creación automática multi-tenant protegida por advisory lock.
 - Procesamiento asíncrono basado en PostgreSQL y `FOR UPDATE SKIP LOCKED`.
 - Recuperación de trabajos bloqueados y reintentos con backoff.
-- PDF multipágina de representación básica, sin truncado silencioso de ítems.
+- Representaciones PDF desacopladas del tipo tributario: A4 profesional multipágina y ticket térmico de 80 mm, ambas generadas con Thymeleaf/HTML-CSS + OpenHTMLToPDF (PDFBox 3), con el mismo QR SUNAT, valor resumen y enlace confidencial de consulta.
 - Descarga de XML, PDF y CDR; producción usa almacenamiento de artefactos en PostgreSQL con longitud + SHA-256 y el backend filesystem conserva escritura atómica con checksum para desarrollo/volúmenes compartidos.
 - Webhooks HTTPS firmados con HMAC-SHA256, reintentos y recuperación de entregas `SENDING` abandonadas.
 - Auditoría de operaciones de escritura con tabla append-only protegida por trigger.
@@ -341,6 +341,8 @@ GET /api/v1/documents/{id}
 GET /api/v1/documents/{id}/history
 GET /api/v1/documents/{id}/xml
 GET /api/v1/documents/{id}/pdf
+GET /api/v1/documents/{id}/pdf?layout=A4
+GET /api/v1/documents/{id}/pdf?layout=THERMAL_80
 GET /api/v1/documents/{id}/cdr
 ```
 
@@ -571,6 +573,28 @@ HMAC_SHA256(secret, timestamp + "." + rawBody)
 
 El secreto del webhook solo se devuelve cuando se crea el endpoint.
 
+## Contrato de errores
+
+Todos los endpoints REST utilizan el mismo formato `ApiError`. Los errores de validación, autenticación, autorización, multipart, conflictos de integridad, bloqueos de concurrencia y fallos de infraestructura se clasifican antes de recurrir a `INTERNAL_ERROR`.
+
+Ejemplo:
+
+```json
+{
+  "timestamp": "2026-09-21T19:37:26Z",
+  "status": 409,
+  "code": "CERTIFICATE_ALREADY_EXISTS",
+  "message": "El certificado ya está registrado para este emisor",
+  "path": "/api/v1/issuers/{issuerId}/certificates",
+  "requestId": "...",
+  "validationErrors": {}
+}
+```
+
+El detalle técnico y el stacktrace se registran únicamente en logs, correlacionados mediante `X-Request-Id`.
+
+El catálogo y criterio de mapeo se documentan en `docs/API_ERRORS.md`.
+
 ## Estados de documento
 
 ```text
@@ -584,6 +608,9 @@ ACCEPTED
 OBSERVED
 REJECTED
 SEND_FAILED
+SUBMITTING
+SUBMISSION_UNKNOWN
+RECONCILIATION_REQUIRED
 VOID_REQUESTED
 VOIDED
 CANCELLED
@@ -614,6 +641,8 @@ src/main/resources/db/migration/V11__global_adjustments_and_catalog53_correction
 src/main/resources/db/migration/V12__database_artifact_storage.sql
 src/main/resources/db/migration/V13__product_classification_codes.sql
 src/main/resources/db/migration/V14__export_customer_country.sql
+src/main/resources/db/migration/V15__certificate_fingerprint_scope.sql
+src/main/resources/db/migration/V16__thermal_pdf_artifact.sql
 ```
 
 Hibernate usa:
@@ -630,7 +659,7 @@ La base es responsabilidad de Flyway.
 ./mvnw test
 ```
 
-La fase de endurecimiento incluye pruebas unitarias/estructurales para:
+La suite incluye pruebas unitarias y estructurales para:
 
 - dígito verificador de RUC;
 - IGV, IVAP y operaciones gratuitas;
@@ -694,3 +723,33 @@ La versión `0.8.0-SNAPSHOT` incorpora el hardening técnico vigente para prepro
 - gate regulatorio separado que exige XSD/reglas oficiales y evidencia SUNAT BETA real.
 
 Para verificación técnica use `VERIFICATION.md`. Para operación y despliegue use `OPERATIONS.md`. Para el procedimiento de evidencia BETA use `docs/SUNAT_BETA_CERTIFICATION.md`.
+
+
+## Representaciones PDF
+
+El tipo tributario del CPE y su formato visual son independientes. PeruBilling conserva `A4` como formato predeterminado para compatibilidad y genera también `THERMAL_80` para integraciones POS.
+
+```text
+GET /api/v1/documents/{id}/pdf                 -> A4
+GET /api/v1/documents/{id}/pdf?layout=A4       -> A4
+GET /api/v1/documents/{id}/pdf?layout=THERMAL_80 -> ticket térmico 80 mm
+```
+
+El portal público admite la misma selección:
+
+```text
+GET /public/v1/documents/{token}/pdf?layout=A4
+GET /public/v1/documents/{token}/pdf?layout=THERMAL_80
+```
+
+Ambas representaciones reutilizan el mismo `DocumentBundle`, cálculos tributarios, `DigestValue`, QR SUNAT y URL confidencial. `THERMAL_80` no es un nuevo comprobante: es otra representación imprimible del mismo CPE. Durante el procesamiento se almacenan ambos PDF como artefactos separados; el esquema incorpora `electronic_document.thermal_pdf_path` mediante Flyway V16.
+
+La presentación visual usa una arquitectura wrapper + fragment inspirada en el enfoque mantenible del proyecto `pymex-erp-backend`: los wrappers definen tamaño/CSS y los fragments contienen la estructura Thymeleaf. El rediseño incorpora cabecera empresarial, tarjetas de cliente/comprobante, documento afectado para notas, detalle comercial, totales, condición de pago y bloque de verificación QR sin inventar datos no presentes en el dominio.
+
+El isotipo canónico se conserva en `src/main/resources/branding/perubilling-mark.svg`. Para la salida PDF se rasteriza internamente la misma geometría SVG, como recurso embebido y sin llamadas externas, usando la paleta `#053E58`, `#0B5675` y `#1AB09B`. Esto reemplaza el antiguo monograma de iniciales y permite usar el mismo lenguaje visual en A4 y `THERMAL_80`.
+
+El ticket térmico se renderiza como una única hoja continua de 80 mm. El generador estima la altura por contenido y valida el número de páginas con PDFBox; si OpenHTMLToPDF desplaza el bloque final por redondeo, vuelve a renderizar con margen adicional. Esto evita una segunda página casi vacía en comprobantes cortos.
+
+### Robustez de emisión M2M y baja
+
+La persistencia de `Idempotency-Key` fuerza el `flush` del comprobante antes de insertar `idempotency_record`, evitando conflictos de FK cuando Hibernate no puede inferir el orden entre entidades relacionadas solo mediante UUID escalares. La Comunicación de Baja bloquea el documento con `PESSIMISTIC_WRITE` y es idempotente por documento: un reintento seguro devuelve el lote existente en vez de generar un `409` artificial.

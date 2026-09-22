@@ -38,6 +38,8 @@ public class ApiCapabilitiesController {
                 capability("VOIDING", "Comunicación de Baja", true, true),
                 capability("LINE_ALLOWANCES_CHARGES", "Descuentos y cargos de línea CORE", true, true),
                 capability("GLOBAL_ALLOWANCES_CHARGES", "Descuentos y cargos globales CORE", true, true),
+                capability("PDF_A4", "Representación PDF A4 profesional", true, false),
+                capability("PDF_THERMAL_80", "Representación PDF térmica de 80 mm para POS", true, false),
                 capability("DETRACTION", "Detracciones / SPOT", false, true),
                 capability("ISC", "Impuesto Selectivo al Consumo", false, true),
                 capability("ADVANCE_PAYMENT", "Anticipos", false, true),

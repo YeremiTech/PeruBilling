@@ -1,6 +1,7 @@
 package pe.com.perubilling.infrastructure;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -71,6 +72,19 @@ class PostgreSqlMigrationTest {
         }
     }
 
+
+    @Test
+    void thermalPdfPathColumnExistsAfterLatestMigration() throws Exception {
+        try (var connection = DriverManager.getConnection(
+                        POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                var statement = connection.prepareStatement(
+                        "select count(*) from information_schema.columns where table_schema='public' "
+                                + "and table_name='electronic_document' and column_name='thermal_pdf_path'");
+                var result = statement.executeQuery()) {
+            assertTrue(result.next());
+            assertTrue(result.getInt(1) == 1);
+        }
+    }
 
     @Test
     void exportCustomerCountryColumnExistsAfterPhase13Migration() throws Exception {
@@ -275,4 +289,149 @@ class PostgreSqlMigrationTest {
             });
         }
     }
+
+    @Test
+    void seriesActivationCanBeUpdatedAfterLatestMigration() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID issuerId = UUID.randomUUID();
+        UUID seriesId = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.now();
+
+        try (var connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())) {
+            try (var tenant = connection.prepareStatement(
+                    "insert into tenant(id,name,slug,status,created_at,updated_at) values (?,?,?,?,?,?)")) {
+                tenant.setObject(1, tenantId);
+                tenant.setString(2, "Series activation tenant");
+                tenant.setString(3, "series-" + tenantId.toString().substring(0, 8));
+                tenant.setString(4, "ACTIVE");
+                tenant.setObject(5, now);
+                tenant.setObject(6, now);
+                tenant.executeUpdate();
+            }
+            try (var issuer = connection.prepareStatement(
+                    "insert into issuer(id,tenant_id,ruc,business_name,address,ubigeo,sunat_environment,active,created_at,updated_at) values (?,?,?,?,?,?,?,?,?,?)")) {
+                issuer.setObject(1, issuerId);
+                issuer.setObject(2, tenantId);
+                issuer.setString(3, "20123456786");
+                issuer.setString(4, "SERIES TEST");
+                issuer.setString(5, "Lima");
+                issuer.setString(6, "150101");
+                issuer.setString(7, "LOCAL");
+                issuer.setBoolean(8, true);
+                issuer.setObject(9, now);
+                issuer.setObject(10, now);
+                issuer.executeUpdate();
+            }
+            try (var series = connection.prepareStatement(
+                    "insert into document_series(id,tenant_id,issuer_id,document_type,series,current_value,active,created_at,updated_at) values (?,?,?,?,?,?,?,?,?)")) {
+                series.setObject(1, seriesId);
+                series.setObject(2, tenantId);
+                series.setObject(3, issuerId);
+                series.setString(4, "INVOICE");
+                series.setString(5, "F001");
+                series.setLong(6, 0);
+                series.setBoolean(7, true);
+                series.setObject(8, now);
+                series.setObject(9, now);
+                series.executeUpdate();
+            }
+            try (var update = connection.prepareStatement(
+                    "update document_series set active=false, updated_at=? where id=?")) {
+                update.setObject(1, OffsetDateTime.now());
+                update.setObject(2, seriesId);
+                assertTrue(update.executeUpdate() == 1);
+            }
+            try (var select = connection.prepareStatement(
+                    "select active from document_series where id=?")) {
+                select.setObject(1, seriesId);
+                try (var result = select.executeQuery()) {
+                    assertTrue(result.next());
+                    assertFalse(result.getBoolean(1));
+                }
+            }
+        }
+    }
+
+    @Test
+    void certificateFingerprintIsUniquePerIssuerNotGlobally() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID issuerA = UUID.randomUUID();
+        UUID issuerB = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.now();
+        String fingerprint = "a".repeat(64);
+
+        try (var connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())) {
+            try (var tenant = connection.prepareStatement(
+                    "insert into tenant(id,name,slug,status,created_at,updated_at) values (?,?,?,?,?,?)")) {
+                tenant.setObject(1, tenantId);
+                tenant.setString(2, "Certificate scope tenant");
+                tenant.setString(3, "cert-" + tenantId.toString().substring(0, 8));
+                tenant.setString(4, "ACTIVE");
+                tenant.setObject(5, now);
+                tenant.setObject(6, now);
+                tenant.executeUpdate();
+            }
+
+            insertIssuer(connection, tenantId, issuerA, "20123456786", now);
+            insertIssuer(connection, tenantId, issuerB, "20600000001", now);
+            insertCertificate(connection, tenantId, issuerA, UUID.randomUUID(), fingerprint, "1", now);
+            insertCertificate(connection, tenantId, issuerB, UUID.randomUUID(), fingerprint, "2", now);
+
+            assertThrows(Exception.class, () ->
+                    insertCertificate(connection, tenantId, issuerA, UUID.randomUUID(), fingerprint, "3", now));
+        }
+    }
+
+    private static void insertIssuer(
+            java.sql.Connection connection,
+            UUID tenantId,
+            UUID issuerId,
+            String ruc,
+            OffsetDateTime now) throws Exception {
+        try (var issuer = connection.prepareStatement(
+                "insert into issuer(id,tenant_id,ruc,business_name,address,ubigeo,sunat_environment,active,created_at,updated_at) values (?,?,?,?,?,?,?,?,?,?)")) {
+            issuer.setObject(1, issuerId);
+            issuer.setObject(2, tenantId);
+            issuer.setString(3, ruc);
+            issuer.setString(4, "CERTIFICATE TEST");
+            issuer.setString(5, "Lima");
+            issuer.setString(6, "150101");
+            issuer.setString(7, "LOCAL");
+            issuer.setBoolean(8, true);
+            issuer.setObject(9, now);
+            issuer.setObject(10, now);
+            issuer.executeUpdate();
+        }
+    }
+
+    private static void insertCertificate(
+            java.sql.Connection connection,
+            UUID tenantId,
+            UUID issuerId,
+            UUID certificateId,
+            String fingerprint,
+            String serialNumber,
+            OffsetDateTime now) throws Exception {
+        try (var certificate = connection.prepareStatement(
+                "insert into digital_certificate(id,tenant_id,issuer_id,certificate_alias,encrypted_pfx,password_encrypted,fingerprint,subject_dn,serial_number,valid_from,valid_until,active,created_at,updated_at) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")) {
+            certificate.setObject(1, certificateId);
+            certificate.setObject(2, tenantId);
+            certificate.setObject(3, issuerId);
+            certificate.setString(4, "test");
+            certificate.setBytes(5, new byte[] {1, 2, 3});
+            certificate.setString(6, "encrypted-password");
+            certificate.setString(7, fingerprint);
+            certificate.setString(8, "CN=TEST");
+            certificate.setString(9, serialNumber);
+            certificate.setObject(10, now.minusDays(1));
+            certificate.setObject(11, now.plusDays(1));
+            certificate.setBoolean(12, true);
+            certificate.setObject(13, now);
+            certificate.setObject(14, now);
+            certificate.executeUpdate();
+        }
+    }
+
 }

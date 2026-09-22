@@ -20,12 +20,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import pe.com.perubilling.billing.api.CreateDocumentRequest;
+import pe.com.perubilling.billing.api.CustomerRequest;
 import pe.com.perubilling.billing.api.DocumentItemRequest;
 import pe.com.perubilling.billing.infrastructure.ElectronicDocumentRepository;
 import pe.com.perubilling.issuer.domain.DocumentSeriesEntity;
@@ -35,6 +38,7 @@ import pe.com.perubilling.issuer.infrastructure.DocumentSeriesRepository;
 import pe.com.perubilling.issuer.infrastructure.IssuerRepository;
 import pe.com.perubilling.shared.domain.BusinessException;
 import pe.com.perubilling.shared.domain.DocumentType;
+import pe.com.perubilling.shared.security.ApiKeyPrincipal;
 import pe.com.perubilling.tenant.domain.TenantEntity;
 import pe.com.perubilling.tenant.infrastructure.TenantRepository;
 
@@ -97,6 +101,15 @@ class DocumentCreationConcurrencyIntegrationTest {
         documentSeries.setCurrentValue(0);
         documentSeries.setActive(true);
         series.saveAndFlush(documentSeries);
+
+        DocumentSeriesEntity invoiceSeries = new DocumentSeriesEntity();
+        invoiceSeries.setTenantId(tenantId);
+        invoiceSeries.setIssuerId(issuerId);
+        invoiceSeries.setDocumentType(DocumentType.INVOICE);
+        invoiceSeries.setSeries("F001");
+        invoiceSeries.setCurrentValue(0);
+        invoiceSeries.setActive(true);
+        series.saveAndFlush(invoiceSeries);
     }
 
     @Test
@@ -184,6 +197,46 @@ class DocumentCreationConcurrencyIntegrationTest {
         assertEquals("B001-2", next.number());
     }
 
+
+    @Test
+    void apiKeyPrincipalCanCreateInvoiceWithIdempotencyRecord() throws Exception {
+        var item = new DocumentItemRequest(
+                "SKU-M2M",
+                "Servicio M2M",
+                "NIU",
+                BigDecimal.ONE,
+                new BigDecimal("100.00"),
+                "10",
+                new BigDecimal("18.00"),
+                BigDecimal.ZERO);
+        var customer = new CustomerRequest(
+                "6",
+                "20100066603",
+                "CLIENTE M2M SAC",
+                "Av. Cliente 456 - Lima",
+                "m2m@example.test",
+                "PE");
+        var request = new CreateDocumentRequest(
+                issuerId,
+                "M2M-ORDER-001",
+                "F001",
+                null,
+                null,
+                "0101",
+                "PEN",
+                customer,
+                List.of(item),
+                null,
+                null);
+
+        var created = apiKeyAuthenticatedCall(tenantId, () ->
+                service.create(DocumentType.INVOICE, request, "m2m-idem-001"));
+
+        assertEquals("F001-1", created.number());
+        assertEquals(1L, jdbc.sql("SELECT COUNT(*) FROM idempotency_record WHERE tenant_id=:tenantId AND idempotency_key='m2m-idem-001'")
+                .param("tenantId", tenantId).query(Long.class).single());
+    }
+
     @Test
     void tenantCannotReadAnotherTenantsDocumentByUuid() throws Exception {
         var created = authenticatedCall(tenantId, () -> service.create(
@@ -227,14 +280,31 @@ class DocumentCreationConcurrencyIntegrationTest {
     }
 
     private long currentSeriesValue() {
-        return series.findAllByTenantIdAndIssuerIdOrderByDocumentTypeAscSeriesAsc(tenantId, issuerId)
-                .getFirst()
+        return series.findAllByTenantIdAndIssuerIdOrderByDocumentTypeAscSeriesAsc(tenantId, issuerId).stream()
+                .filter(value -> value.getDocumentType() == DocumentType.RECEIPT && "B001".equals(value.getSeries()))
+                .findFirst()
+                .orElseThrow()
                 .getCurrentValue();
     }
 
     private <T> T authenticatedCall(UUID currentTenantId, ThrowingSupplier<T> action) throws Exception {
         var context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(new JwtAuthenticationToken(jwt(currentTenantId)));
+        SecurityContextHolder.setContext(context);
+        try {
+            return action.get();
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+
+    private <T> T apiKeyAuthenticatedCall(UUID currentTenantId, ThrowingSupplier<T> action) throws Exception {
+        var context = SecurityContextHolder.createEmptyContext();
+        var principal = new ApiKeyPrincipal(
+                UUID.randomUUID(), currentTenantId, "integration-key", java.util.Set.of("DOCUMENT_WRITE"));
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, List.of(new SimpleGrantedAuthority("SCOPE_DOCUMENT_WRITE"))));
         SecurityContextHolder.setContext(context);
         try {
             return action.get();

@@ -19,7 +19,10 @@ class DocumentPdfGeneratorPublicLinkTest {
     @Test
     void printedRepresentationContainsCustomerConsultationUrl() throws Exception {
         var generator = new DocumentPdfGenerator(
-                new SunatQrPayloadBuilder(new XmlDigestValueExtractor()), new SunatQrCodeGenerator());
+                new SunatQrPayloadBuilder(new XmlDigestValueExtractor()),
+                new SunatQrCodeGenerator(),
+                new pe.com.perubilling.cpe.ubl.AmountInWords(),
+                new XmlDigestValueExtractor());
         String url = "https://billing.example.com/public/v1/documents/abc123XYZ987";
         byte[] pdf = generator.generate(bundle(), "<root/>".getBytes(), url);
         try (var document = Loader.loadPDF(pdf)) {

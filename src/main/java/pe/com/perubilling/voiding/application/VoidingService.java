@@ -45,21 +45,43 @@ public class VoidingService {
     @Transactional
     public VoidingResponse requestVoid(UUID documentId, VoidDocumentRequest request) {
         UUID tenantId = tenantContext.requireTenantId();
-        var document = documents.findByIdAndTenantId(documentId, tenantId)
+        var document = documents.findByIdAndTenantIdForUpdate(documentId, tenantId)
                 .orElseThrow(() -> BusinessException.notFound("DOCUMENT_NOT_FOUND", "Documento no encontrado"));
+
+        // La solicitud de baja es idempotente por documento. Si una llamada anterior ya
+        // creó el lote, devolvemos el mismo resultado en vez de convertir un reintento
+        // seguro en un 409. El lock del documento evita dos lotes concurrentes.
+        var existingBatch = batches.findByTenantIdAndDocumentId(tenantId, documentId);
+        if (existingBatch.isPresent()) {
+            var batch = existingBatch.get();
+            DocumentStatus status = document.getStatus() == DocumentStatus.VOIDED
+                    ? DocumentStatus.VOIDED
+                    : DocumentStatus.VOID_REQUESTED;
+            return new VoidingResponse(documentId, status, batch.getIdentifier(),
+                    status == DocumentStatus.VOIDED
+                            ? "El comprobante ya fue dado de baja"
+                            : "La Comunicación de Baja ya se encuentra registrada");
+        }
+        if (document.getStatus() == DocumentStatus.VOID_REQUESTED
+                || document.getStatus() == DocumentStatus.VOIDED
+                || (document.getStatus() == DocumentStatus.PENDING_SUMMARY
+                    && "3".equals(document.getSummaryConditionCode()))) {
+            return new VoidingResponse(
+                    documentId,
+                    document.getStatus() == DocumentStatus.VOIDED ? DocumentStatus.VOIDED : DocumentStatus.VOID_REQUESTED,
+                    null,
+                    document.getStatus() == DocumentStatus.VOIDED
+                            ? "El comprobante ya fue dado de baja"
+                            : "La baja del comprobante ya fue solicitada");
+        }
 
         if (document.getStatus() != DocumentStatus.ACCEPTED && document.getStatus() != DocumentStatus.OBSERVED) {
             throw BusinessException.conflict("DOCUMENT_NOT_VOIDABLE",
                     "Solo se puede solicitar baja de un comprobante aceptado por SUNAT");
         }
-        if (document.getDeliveryStatus() != DeliveryStatus.NOT_DELIVERED) {
+        if (document.getDeliveryStatus() != null && document.getDeliveryStatus() != DeliveryStatus.NOT_DELIVERED) {
             throw BusinessException.conflict("DOCUMENT_ALREADY_GRANTED",
                     "El comprobante ya fue otorgado al adquirente; corresponde evaluar una nota de crédito y no una comunicación de baja");
-        }
-        if (batches.findByTenantIdAndDocumentId(tenantId, documentId).isPresent()
-                || document.getStatus() == DocumentStatus.VOID_REQUESTED
-                || document.getStatus() == DocumentStatus.VOIDED) {
-            throw BusinessException.conflict("VOID_ALREADY_REQUESTED", "El comprobante ya tiene una baja solicitada");
         }
 
         String reason = request.reason().trim();
@@ -104,7 +126,7 @@ public class VoidingService {
         batch.setIdentifier("RA-" + generationDate.toString().replace("-", "") + "-" + sequence);
         batch.setReason(reason);
         batch.setStatus(VoidingBatchStatus.QUEUED);
-        batches.save(batch);
+        batches.saveAndFlush(batch);
 
         document.setStatus(DocumentStatus.VOID_REQUESTED);
         documents.save(document);

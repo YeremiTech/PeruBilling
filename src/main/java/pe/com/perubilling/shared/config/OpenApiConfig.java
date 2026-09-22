@@ -42,6 +42,9 @@ public class OpenApiConfig {
         components.addResponses("Conflict", new ApiResponse().description("Conflicto de idempotencia, unicidad o estado").content(errorContent));
         components.addResponses("UnprocessableEntity", new ApiResponse().description("Documento no cumple reglas tributarias").content(errorContent));
         components.addResponses("TooManyRequests", new ApiResponse().description("Límite de solicitudes excedido").content(errorContent));
+        components.addResponses("PayloadTooLarge", new ApiResponse().description("Payload o archivo demasiado grande").content(errorContent));
+        components.addResponses("UnsupportedMediaType", new ApiResponse().description("Content-Type no soportado").content(errorContent));
+        components.addResponses("ServiceUnavailable", new ApiResponse().description("Dependencia o infraestructura temporalmente no disponible").content(errorContent));
         components.addResponses("InternalServerError", new ApiResponse().description("Error interno correlacionado mediante requestId").content(errorContent));
         return components;
     }

@@ -2,6 +2,7 @@ package pe.com.perubilling.outbox.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -36,7 +37,11 @@ class OutboxPublisherTest {
         var captor = ArgumentCaptor.forClass(OutboxEventEntity.class);
         verify(repository).save(captor.capture());
         var saved = captor.getValue();
-        assertEquals(eventId, saved.getId());
+        assertNotNull(eventId);
+        // The storage primary key must stay null until JPA persists the new row. If it is
+        // preassigned, Spring Data save() uses merge() and Hibernate 7 treats it as a
+        // detached entity, which can raise StaleObjectStateException.
+        assertNull(saved.getId());
         assertEquals(tenantId, saved.getTenantId());
         assertEquals(documentId, saved.getAggregateId());
         assertEquals("electronic_document", saved.getAggregateType());

@@ -1,24 +1,38 @@
-target/
-.idea/
-.vscode/
-*.iml
+# Build output
+/target/
+
+# Runtime data
+/data/
+*.log
+*.pid
+
+# Local secrets and environment overrides
 .env
-data/
-*.pfx
-*.p12
-*.jks
-*.pem
-*.key
-*.crt
+.env.*
+!.env.example
+
+# IDE metadata
+.classpath
+.project
+.settings/
+.idea/
+*.iml
+.vscode/
+
+# OS/editor temporary files
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
 
+# Test/coverage output
+.jacoco/
+coverage/
 
-# Recursos SUNAT descargados/locales: conservar scripts, manifests y documentación versionables.
-sunat-resources/xsd/*
-!sunat-resources/xsd/.gitkeep
-sunat-resources/rules/*.xlsx
-sunat-resources/rules/*.xlsx.sha256
-
-# Evidencia SUNAT BETA real (puede contener información tributaria sensible).
+# Local SUNAT material downloaded for verification
+sunat-resources/xsd/*.xsd
+sunat-resources/rules/*.xsl
+sunat-resources/rules/*.xslt
 sunat-resources/beta-fixtures/cases/*
 !sunat-resources/beta-fixtures/cases/.gitkeep

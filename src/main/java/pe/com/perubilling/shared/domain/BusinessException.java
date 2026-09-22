@@ -12,11 +12,24 @@ public class BusinessException extends RuntimeException {
         this.code = code;
     }
 
-    public HttpStatus getStatus() { return status; }
-    public String getCode() { return code; }
+    public HttpStatus getStatus() {
+        return status;
+    }
+
+    public String getCode() {
+        return code;
+    }
 
     public static BusinessException badRequest(String code, String message) {
         return new BusinessException(HttpStatus.BAD_REQUEST, code, message);
+    }
+
+    public static BusinessException unauthorized(String code, String message) {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, code, message);
+    }
+
+    public static BusinessException forbidden(String code, String message) {
+        return new BusinessException(HttpStatus.FORBIDDEN, code, message);
     }
 
     public static BusinessException notFound(String code, String message) {
@@ -27,7 +40,19 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(HttpStatus.CONFLICT, code, message);
     }
 
-    public static BusinessException forbidden(String code, String message) {
-        return new BusinessException(HttpStatus.FORBIDDEN, code, message);
+    public static BusinessException unprocessableEntity(String code, String message) {
+        return new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, code, message);
+    }
+
+    public static BusinessException tooManyRequests(String code, String message) {
+        return new BusinessException(HttpStatus.TOO_MANY_REQUESTS, code, message);
+    }
+
+    public static BusinessException serviceUnavailable(String code, String message) {
+        return new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, code, message);
+    }
+
+    public static BusinessException gatewayTimeout(String code, String message) {
+        return new BusinessException(HttpStatus.GATEWAY_TIMEOUT, code, message);
     }
 }

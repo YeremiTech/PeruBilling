@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${doc.documentTitle() + ' ' + doc.number()}">Ticket electrónico</title>
+    <style>
+        @page { margin: 0; }
+        html, body { width: 80mm; margin: 0; padding: 0; background: #ffffff; }
+        body { color: #10243f; font-family: Arial, Helvetica, sans-serif; font-size: 8.3px; line-height: 1.28; }
+        * { box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .ticket-shell { position: relative; width: 80mm; padding: 4mm 4mm 3mm; background: #ffffff; }
+        .ticket-watermark { position: absolute; z-index: 0; top: 45%; left: 53%; width: 38mm; height: 38mm; margin-left: -19mm; }
+        .ticket-content { position: relative; z-index: 1; }
+
+        .ticket-brand { margin-bottom: 2mm; }
+        .ticket-brand-logo-cell { width: 15mm; vertical-align: middle; }
+        .ticket-brand-logo { display: block; width: 13mm; height: 13mm; margin: 0 auto; }
+        .ticket-brand-data { vertical-align: middle; padding-left: 1.6mm; word-wrap: break-word; }
+        .ticket-company-name { color: #053E58; font-size: 12.5px; line-height: 1.08; font-weight: bold; text-transform: uppercase; }
+        .ticket-company-legal { margin-top: .4mm; color: #64748b; font-size: 6.5px; }
+        .ticket-company-meta { margin-top: .4mm; color: #334155; font-size: 7.3px; }
+        .ticket-year { width: 13mm; text-align: center; vertical-align: top; padding: 1.6mm 1mm; background: #053E58; color: #ffffff; border-radius: 2mm; font-size: 10px; font-weight: bold; }
+
+        .ticket-title-box { margin: 2mm 0 1.2mm; padding: 2.5mm 2.5mm; background: #053E58; color: #ffffff; border-radius: 2mm; text-align: center; }
+        .ticket-title-icon { display: inline-block; width: 8mm; height: 8mm; margin-right: 1.8mm; border: 1px solid #1AB09B; border-radius: 2mm; vertical-align: middle; text-align: center; }
+        .ticket-title-icon img { width: 4.7mm; height: 4.7mm; margin-top: 1.55mm; }
+        .ticket-title { display: inline-block; width: 54mm; vertical-align: middle; font-size: 12.5px; font-weight: bold; text-transform: uppercase; line-height: 1.12; }
+        .ticket-number-box { margin-bottom: 2mm; padding: 1.8mm 2mm; text-align: center; background: #f2f7f8; border-radius: 2mm; }
+        .ticket-number { color: #1AB09B; font-size: 17px; font-weight: bold; letter-spacing: .7px; }
+        .ticket-date { margin-top: .8mm; color: #334155; font-size: 8px; }
+
+        .ticket-section, .ticket-reference { margin-bottom: 1.45mm; padding: 1.65mm; border: 1px solid #dfe7ef; border-radius: 1.7mm; page-break-inside: avoid; background: #ffffff; }
+        .ticket-section-title { margin-bottom: .9mm; padding-bottom: .8mm; border-bottom: 1px solid #1AB09B; color: #10243f; font-size: 8px; font-weight: bold; text-transform: uppercase; }
+        .ticket-dot { display: inline-block; width: 4.4mm; height: 4.4mm; margin-right: 1mm; background: #1AB09B; border-radius: 4.4mm; vertical-align: middle; text-align: center; }
+        .ticket-dot img { width: 2.7mm; height: 2.7mm; margin-top: .85mm; }
+        .ticket-info td { padding: .64mm 0; border-bottom: .2mm dotted #d5dee8; word-wrap: break-word; }
+        .ticket-info td:first-child { width: 28%; color: #475569; }
+        .ticket-info td:last-child { width: 72%; text-align: right; font-weight: bold; }
+        .reference-number { margin-bottom: .7mm; font-weight: bold; color: #053E58; }
+
+        .ticket-detail-section { padding-bottom: .7mm; }
+        .ticket-item { padding: .9mm 0; border-bottom: 1px solid #edf2f7; page-break-inside: avoid; }
+        .ticket-item-head td:first-child { width: 67%; }
+        .ticket-item-head td:last-child { width: 33%; }
+        .ticket-item-desc { margin-top: .4mm; color: #334155; }
+        .ticket-item-meta { margin-top: .5mm; color: #64748b; font-size: 7px; }
+        .ticket-item-meta td:first-child { width: 63%; }
+        .ticket-item-meta td:last-child { width: 37%; }
+        .right { text-align: right; }
+
+        .ticket-totals td { padding: .65mm 0; border-bottom: .2mm dotted #d5dee8; }
+        .ticket-totals td:first-child { color: #475569; }
+        .ticket-grand-total { margin-top: 1mm; }
+        .ticket-grand-total td { padding: 1.5mm 1.8mm; background: #053E58; color: #ffffff; font-size: 11px; font-weight: bold; }
+        .ticket-grand-total td:first-child { border-radius: 1.4mm 0 0 1.4mm; }
+        .ticket-grand-total td:last-child { border-radius: 0 1.4mm 1.4mm 0; font-size: 12px; }
+        .ticket-words { margin-top: 1.1mm; color: #334155; font-size: 7px; }
+        .ticket-installments { margin-top: 1mm; font-size: 7px; }
+        .ticket-installments th { padding: .7mm 0; background: #eef8f6; color: #10243f; text-align: left; }
+        .ticket-installments td { padding: .65mm 0; border-bottom: .2mm dotted #d5dee8; }
+        .ticket-observations { margin: 1.5mm 0; padding: 1.5mm; border: 1px dashed #6b87a7; border-radius: 1.5mm; color: #334155; background: #ffffff; }
+
+        .ticket-verify-card { margin-top: 1.5mm; padding: 1.5mm; border: 1px solid #dfe7ef; border-radius: 1.7mm; background: #ffffff; page-break-inside: avoid; }
+        .ticket-qr-cell { width: 39%; text-align: center; vertical-align: middle; }
+        .ticket-verify-copy { width: 61%; vertical-align: middle; padding-left: 2mm; }
+        .ticket-qr { width: 23mm; height: 23mm; border: 1px solid #1AB09B; padding: .7mm; }
+        .ticket-verify-title { margin-bottom: .8mm; color: #053E58; font-size: 8.5px; font-weight: bold; text-transform: uppercase; }
+        .ticket-public { margin-top: 1mm; padding: 1.2mm; background: #1AB09B; color: #ffffff; border-radius: 1.3mm; font-size: 6.3px; word-wrap: break-word; }
+        .ticket-digest { margin-top: 1.2mm; color: #64748b; font-size: 5.9px; word-wrap: break-word; }
+        .ticket-thanks { margin-top: 1.5mm; padding: 1.5mm; border: 1px solid #dfe7ef; border-radius: 1.6mm; text-align: center; color: #1AB09B; background: #ffffff; page-break-inside: avoid; }
+        .ticket-thanks strong, .ticket-thanks span { display: block; }
+        .ticket-thanks span { margin-top: .5mm; color: #64748b; font-size: 6.7px; }
+        .ticket-legal { margin-top: .8mm; padding-top: .8mm; border-top: 1px solid #dfe7ef; color: #64748b !important; font-size: 6.1px !important; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/cpe-thermal-modern :: content}"></div>
+</body>
+</html>

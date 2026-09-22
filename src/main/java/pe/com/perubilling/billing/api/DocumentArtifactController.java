@@ -12,9 +12,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.com.perubilling.billing.domain.ElectronicDocumentEntity;
 import pe.com.perubilling.billing.infrastructure.ElectronicDocumentRepository;
+import pe.com.perubilling.shared.domain.DocumentPdfLayout;
 import pe.com.perubilling.shared.domain.BusinessException;
 import pe.com.perubilling.shared.security.TenantContext;
 import pe.com.perubilling.shared.storage.ArtifactStorage;
@@ -59,9 +61,17 @@ public class DocumentArtifactController {
 
     @GetMapping("/pdf")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATOR','VIEWER') or hasAuthority('SCOPE_DOCUMENT_READ')")
-    @Operation(summary = "Descarga la representación PDF")
-    public ResponseEntity<byte[]> pdf(@PathVariable UUID id) {
+    @Operation(summary = "Descarga la representación PDF A4 o térmica de 80 mm")
+    public ResponseEntity<byte[]> pdf(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "A4") DocumentPdfLayout layout) {
         var document = requireDocument(id);
+        if (layout == DocumentPdfLayout.THERMAL_80) {
+            return file(
+                    document.getThermalPdfPath(),
+                    MediaType.APPLICATION_PDF,
+                    document.getFullNumber() + "-thermal-80.pdf");
+        }
         return file(document.getPdfPath(), MediaType.APPLICATION_PDF, document.getFullNumber() + ".pdf");
     }
 

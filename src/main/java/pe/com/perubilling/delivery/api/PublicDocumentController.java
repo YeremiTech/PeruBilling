@@ -9,8 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.com.perubilling.delivery.application.DocumentDeliveryService;
+import pe.com.perubilling.shared.domain.DocumentPdfLayout;
 
 @RestController
 @RequestMapping("/public/v1/documents/{token}")
@@ -34,7 +36,11 @@ public class PublicDocumentController {
     }
 
     @GetMapping("/pdf")
-    public ResponseEntity<byte[]> pdf(@PathVariable String token){return file(service.download(token,"pdf"));}
+    public ResponseEntity<byte[]> pdf(
+            @PathVariable String token,
+            @RequestParam(defaultValue = "A4") DocumentPdfLayout layout) {
+        return file(service.download(token, "pdf", layout));
+    }
 
     @GetMapping("/xml")
     public ResponseEntity<byte[]> xml(@PathVariable String token){return file(service.download(token,"xml"));}

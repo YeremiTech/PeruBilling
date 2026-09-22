@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${doc.documentTitle() + ' ' + doc.number()}">Comprobante electrónico</title>
+    <style>
+        @page { size: A4; margin: 8mm 8mm 17mm; }
+        html, body { margin: 0; padding: 0; background: #ffffff; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #10243f; font-size: 9.4px; line-height: 1.34; }
+        * { box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        td, th { vertical-align: top; }
+        .document-shell { position: relative; padding: 4mm 4mm 3mm; }
+        .document-watermark { position: absolute; z-index: 0; top: 52%; left: 53%; width: 92mm; height: 92mm; margin-top: -46mm; margin-left: -46mm; }
+        .document-content { position: relative; z-index: 1; }
+
+        .header-table { margin-bottom: 5mm; }
+        .brand-cell { width: 61%; padding-right: 5mm; }
+        .stamp-cell { width: 39%; text-align: right; padding-top: 1mm; }
+        .brand-table { table-layout: fixed; }
+        .brand-logo-cell { width: 26mm; vertical-align: middle; }
+        .brand-logo { display: block; width: 23mm; height: 23mm; margin: 0 auto; }
+        .brand-data-cell { vertical-align: middle; padding-left: 3mm; }
+        .brand-name { color: #053E58; font-size: 23px; font-weight: bold; line-height: 1.05; text-transform: uppercase; letter-spacing: .2px; }
+        .brand-legal { margin-top: 1mm; color: #334155; font-size: 8.3px; text-transform: uppercase; }
+        .brand-tagline { margin-top: 1.2mm; color: #1AB09B; font-size: 9.6px; font-weight: bold; text-transform: uppercase; letter-spacing: .65px; }
+        .issuer-meta { margin-top: 4.5mm; width: 97%; }
+        .issuer-meta td { padding: 1.1mm 0; }
+        .meta-key { width: 21mm; color: #053E58; font-size: 7.7px; font-weight: bold; }
+        .meta-value { color: #26364d; }
+
+        .year-badge { display: inline-block; padding: 2.4mm 5.2mm; margin-right: 3mm; margin-bottom: -1px; color: #ffffff; background: #1AB09B; border-radius: 3mm 3mm 0 0; font-weight: bold; font-size: 13px; }
+        .document-stamp { border: 1.2px solid #1AB09B; border-radius: 2.7mm; padding: 4.2mm 4mm 4mm; text-align: center; background: #ffffff; }
+        .stamp-icon-wrap { width: 10mm; height: 10mm; margin: 0 auto 2.2mm; border: 1px solid #1AB09B; border-radius: 10mm; text-align: center; }
+        .stamp-icon-wrap img { width: 5.6mm; height: 5.6mm; margin-top: 2.1mm; }
+        .document-title { color: #053E58; font-size: 15.6px; font-weight: bold; line-height: 1.14; text-transform: uppercase; }
+        .document-number { margin-top: 2.2mm; color: #1AB09B; font-size: 19px; font-weight: bold; letter-spacing: .55px; }
+        .document-code { margin-top: 1.1mm; color: #64748b; font-size: 7.4px; }
+
+        .summary-grid { margin-bottom: 4mm; }
+        .summary-left, .summary-right { width: 50%; }
+        .summary-left { padding-right: 2mm; }
+        .summary-right { padding-left: 2mm; }
+        .card { min-height: 47mm; border: 1px solid #dfe7ef; border-radius: 2.8mm; padding: 3.5mm; background: #ffffff; }
+        .section-title { padding-bottom: 1.7mm; margin-bottom: 2.1mm; border-bottom: 1px solid #1AB09B; color: #10243f; font-weight: bold; text-transform: uppercase; font-size: 9.7px; }
+        .section-icon { display: inline-block; width: 6.4mm; height: 6.4mm; margin-right: 1.7mm; background: #1AB09B; border-radius: 6.4mm; vertical-align: middle; text-align: center; }
+        .section-icon img { width: 3.8mm; height: 3.8mm; margin-top: 1.3mm; }
+        .customer-name { margin-bottom: 1.5mm; color: #053E58; font-size: 10.4px; font-weight: bold; text-transform: uppercase; }
+        .info-table td { padding: 1.25mm 0; border-bottom: .2mm dotted #d5dee8; word-wrap: break-word; }
+        .info-table .label { width: 35%; color: #475569; }
+        .info-table .value { width: 65%; color: #10243f; font-weight: bold; }
+
+        .reference-strip { margin-bottom: 4mm; padding: 2.7mm 3.2mm; background: #f1fbf9; border: 1px solid #c8eee7; border-radius: 2.5mm; page-break-inside: avoid; }
+        .reference-strip td { vertical-align: middle; }
+        .reference-icon-cell { width: 11mm; }
+        .reference-icon { width: 7mm; height: 7mm; background: #1AB09B; border-radius: 7mm; text-align: center; }
+        .reference-icon img { width: 4mm; height: 4mm; margin-top: 1.5mm; }
+        .reference-divider { width: 7mm; border-left: 1px solid #9ddfd4; }
+
+        .items-table { margin-bottom: 4mm; font-size: 8.6px; }
+        .items-table thead { display: table-header-group; }
+        .items-table th { padding: 2.2mm 1.1mm; background: #053E58; color: #ffffff; font-size: 8px; text-align: center; }
+        .items-table th:first-child { border-radius: 2mm 0 0 0; }
+        .items-table th:last-child { border-radius: 0 2mm 0 0; }
+        .items-table td { padding: 2.1mm 1mm; border-bottom: 1px solid #edf2f7; word-wrap: break-word; }
+        .items-table tr { page-break-inside: avoid; }
+        .col-line { width: 8mm; }
+        .col-description { width: 68mm; text-align: left !important; }
+        .col-qty { width: 14mm; }
+        .col-unit { width: 17mm; }
+        .col-price { width: 21mm; }
+        .col-discount { width: 20mm; }
+        .col-total { width: 22mm; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .item-description { color: #10243f; font-weight: bold; }
+        .item-code { margin-top: .6mm; color: #64748b; font-size: 7.2px; }
+        .total-item { color: #1AB09B; font-weight: bold; }
+
+        .bottom-grid { margin-bottom: 4mm; page-break-inside: avoid; }
+        .bottom-left { width: 42%; padding-right: 2mm; }
+        .bottom-right { width: 58%; padding-left: 2mm; }
+        .mini-card, .totals-card { border: 1px solid #dfe7ef; border-radius: 2.8mm; padding: 3mm; background: #ffffff; }
+        .payment-card { margin-top: 3mm; }
+        .observations-text { min-height: 14mm; color: #475569; }
+        .payment-summary td { padding: 1mm 0; border-bottom: .2mm dotted #d5dee8; }
+        .payment-summary td:first-child { color: #475569; }
+        .payment-summary td:last-child { text-align: right; font-weight: bold; }
+        .installments { margin-top: 1.5mm; font-size: 7.6px; }
+        .installments th { padding: 1mm; background: #eef8f6; color: #10243f; text-align: left; }
+        .installments td { padding: 1mm; border-bottom: .2mm dotted #d5dee8; }
+        .totals-table td { padding: 1.35mm 2mm; border-bottom: 1px solid #edf2f7; }
+        .totals-table td:first-child { color: #334155; }
+        .grand-total-table { margin-top: 1mm; }
+        .grand-total-table td { padding: 2.8mm 3mm; background: #1AB09B; color: #ffffff; font-size: 13px; font-weight: bold; }
+        .grand-total-table td:first-child { border-radius: 2mm 0 0 2mm; }
+        .grand-total-table td:last-child { border-radius: 0 2mm 2mm 0; font-size: 16px; }
+        .amount-words { padding: 2.3mm 2mm 1mm; color: #10243f; font-size: 8px; }
+        .coin-icon { display: inline-block; width: 5mm; height: 5mm; line-height: 5mm; margin-right: 1mm; text-align: center; color: #1AB09B; border: 1px solid #1AB09B; border-radius: 5mm; font-weight: bold; }
+
+        .verification-card { border: 1px solid #dfe7ef; border-radius: 2.8mm; padding: 3mm; page-break-inside: avoid; background: #ffffff; }
+        .verification-card td { vertical-align: middle; }
+        .verify-copy { width: 61%; padding-right: 4mm; }
+        .verify-separator { width: 4%; border-left: 1px solid #dfe7ef; }
+        .verify-qr-cell { width: 35%; text-align: center; }
+        .verify-title, .verify-heading { color: #053E58; font-weight: bold; text-transform: uppercase; font-size: 9px; }
+        .verify-title-row { margin-bottom: 1.4mm; }
+        .verify-title-row .section-icon { width: 5.6mm; height: 5.6mm; }
+        .verify-title-row .section-icon img { width: 3.3mm; height: 3.3mm; margin-top: 1.15mm; }
+        .verify-text { margin-top: 1.3mm; color: #475569; }
+        .digest { margin-top: 2mm; color: #64748b; font-size: 6.7px; word-wrap: break-word; }
+        .qr-image { width: 30mm; height: 30mm; margin: 1.5mm auto .8mm; border: 1px solid #1AB09B; padding: .8mm; }
+        .qr-label { color: #1AB09B; font-size: 7px; font-weight: bold; }
+        .public-url { margin-top: 2mm; padding-top: 2mm; border-top: 1px solid #edf2f7; color: #475569; font-size: 7px; word-wrap: break-word; }
+        .public-url a { color: #0B5675; text-decoration: none; }
+
+        .document-footer { position: fixed; left: 12mm; right: 12mm; bottom: 4mm; background: #053E58; color: #ffffff; border-radius: 2mm; padding: 2.4mm 3mm; font-size: 7.4px; }
+        .document-footer td:first-child { width: 72%; }
+        .footer-right { width: 28%; text-align: right; }
+        .page-number:after { content: "Página " counter(page) " de " counter(pages); }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/cpe-a4-modern :: content}"></div>
+</body>
+</html>

@@ -1,7 +1,6 @@
 package pe.com.perubilling.identity.application;
 
 import java.time.Instant;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import pe.com.perubilling.identity.api.LoginRequest;
 import pe.com.perubilling.identity.api.LoginResponse;
@@ -22,8 +21,7 @@ public class AuthService {
                 request.email().trim(), request.password(), Instant.now());
 
         if (result.outcome() == AuthenticationStateService.Outcome.LOCKED) {
-            throw new BusinessException(
-                    HttpStatus.TOO_MANY_REQUESTS,
+            throw BusinessException.tooManyRequests(
                     "ACCOUNT_TEMPORARILY_LOCKED",
                     "Demasiados intentos fallidos. Intente nuevamente más tarde");
         }
@@ -39,8 +37,7 @@ public class AuthService {
     }
 
     private BusinessException invalidCredentials() {
-        return new BusinessException(
-                HttpStatus.UNAUTHORIZED,
+        return BusinessException.unauthorized(
                 "INVALID_CREDENTIALS",
                 "Credenciales inválidas");
     }

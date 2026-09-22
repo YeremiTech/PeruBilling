@@ -20,6 +20,8 @@
         <java.version>25</java.version>
         <springdoc.version>3.1.1</springdoc.version>
         <pdfbox.version>3.0.8</pdfbox.version>
+        <thymeleaf.version>3.1.5.RELEASE</thymeleaf.version>
+        <openhtmltopdf.version>1.1.86</openhtmltopdf.version>
         <zxing.version>3.5.4</zxing.version>
         <cyclonedx.version>2.9.3</cyclonedx.version>
         <maven-enforcer.version>3.6.3</maven-enforcer.version>
@@ -80,6 +82,16 @@
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+            <version>${thymeleaf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>${openhtmltopdf.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.zxing</groupId>

@@ -3,12 +3,17 @@ package pe.com.perubilling.issuer.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.UUID;
 import pe.com.perubilling.shared.domain.BaseEntity;
 
 @Entity
-@Table(name = "digital_certificate")
+@Table(
+        name = "digital_certificate",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_certificate_issuer_fingerprint",
+                columnNames = {"tenant_id", "issuer_id", "fingerprint"}))
 public class DigitalCertificateEntity extends BaseEntity {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
@@ -20,7 +25,7 @@ public class DigitalCertificateEntity extends BaseEntity {
     private byte[] encryptedPfx;
     @Column(name = "password_encrypted", nullable = false, length = 1000)
     private String passwordEncrypted;
-    @Column(nullable = false, unique = true, length = 128)
+    @Column(nullable = false, length = 128)
     private String fingerprint;
     @Column(name = "subject_dn", nullable = false, length = 1000)
     private String subjectDn;

@@ -50,11 +50,12 @@ public class DocumentStateTransitionService {
     }
 
     @Transactional
-    public void saveArtifacts(UUID documentId, String xmlPath, String signedXmlPath, String pdfPath, String xmlHash) {
+    public void saveArtifacts(UUID documentId, String xmlPath, String signedXmlPath, String pdfPath, String thermalPdfPath, String xmlHash) {
         var document=require(documentId);
         document.setXmlPath(xmlPath);
         document.setSignedXmlPath(signedXmlPath);
         document.setPdfPath(pdfPath);
+        document.setThermalPdfPath(thermalPdfPath);
         document.setXmlHash(xmlHash);
     }
 

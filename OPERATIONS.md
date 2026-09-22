@@ -121,7 +121,7 @@ El backend conserva controles de autenticación y lockout. El límite de tráfic
 ## Gate obligatorio antes de un piloto real
 
 1. `./mvnw clean verify` con JDK 25 y Docker disponible para Testcontainers.
-2. Flyway V1→V14 desde base vacía y prueba de upgrade de una copia representativa.
+2. Flyway V1→V16 desde base vacía y prueba de upgrade de una copia representativa.
 3. XSD oficiales UBL 2.1/2.0 con hashes fijados por la release.
 4. Firma XMLDSig generada y verificada criptográficamente.
 5. Fixtures positivos/negativos del alcance CORE.

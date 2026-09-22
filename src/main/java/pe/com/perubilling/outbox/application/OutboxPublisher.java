@@ -27,7 +27,10 @@ public class OutboxPublisher {
                     "createdAt", Instant.now().toString(),
                     "data", data));
             OutboxEventEntity e = new OutboxEventEntity();
-            e.setId(eventId);
+            // Keep the JPA-generated storage id unset. Spring Data decides whether to
+            // persist or merge from the entity id; pre-assigning the generated id makes
+            // a brand-new outbox row look detached under Hibernate 7. The envelope event
+            // id is intentionally independent from the outbox row primary key.
             e.setTenantId(tenantId);
             e.setEventType(eventType);
             e.setAggregateType(aggregateType);

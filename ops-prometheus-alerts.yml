@@ -1,0 +1,34 @@
+groups:
+  - name: perubilling-core
+    rules:
+      - alert: PeruBillingSubmissionUnknown
+        expr: perubilling_documents_submission_unknown > 0
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "Existen comprobantes con estado SUNAT incierto"
+      - alert: PeruBillingPendingSummary
+        expr: perubilling_documents_pending_summary > 0
+        for: 2h
+        labels: { severity: warning }
+        annotations:
+          summary: "Existen boletas/notas pendientes de Resumen Diario"
+      - alert: PeruBillingCertificateExpiring
+        expr: perubilling_certificates_expiring_30d > 0
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "Existe un certificado digital que vence en menos de 30 días"
+      - alert: PeruBillingRejectedDocuments
+        expr: perubilling_documents_rejected_24h > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "SUNAT rechazó uno o más comprobantes en las últimas 24 horas"
+
+      - alert: PeruBillingAuditWriteFailures
+        expr: increase(perubilling_audit_write_failures_total[5m]) > 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "PeruBilling no pudo persistir uno o más eventos de auditoría HTTP"

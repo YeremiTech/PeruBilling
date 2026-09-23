@@ -1,0 +1,20 @@
+package pe.com.perubilling.billing.domain;
+
+public enum DocumentStatus {
+    QUEUED,
+    SUMMARY_PREPARATION_QUEUED,
+    PENDING_SUMMARY,
+    SUMMARY_PROCESSING,
+    PROCESSING,
+    SUBMITTING,
+    SUBMISSION_UNKNOWN,
+    RECONCILIATION_REQUIRED,
+    RETRY_PENDING,
+    ACCEPTED,
+    OBSERVED,
+    REJECTED,
+    SEND_FAILED,
+    VOID_REQUESTED,
+    VOIDED,
+    CANCELLED
+}

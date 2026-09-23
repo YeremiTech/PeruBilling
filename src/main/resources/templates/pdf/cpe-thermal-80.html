@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${doc.documentTitle() + ' ' + doc.number()}">Ticket electrónico</title>
+    <style>
+        @page { margin: 0; }
+        html, body { width: 80mm; margin: 0; padding: 0; background: #ffffff; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #173451; font-size: 9.4px; line-height: 1.3; }
+        * { box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        td, th { vertical-align: top; }
+
+        /* Thermal paper is the sheet itself. Keep only the printer-safe edge. */
+        .ticket-page { width: 80mm; background: #ffffff; padding: 2mm 1.6mm 1.5mm; }
+        .ticket-shell { background: #ffffff; padding: 0; }
+
+        .top-header { position: relative; margin-bottom: 1.4mm; }
+        /* Reuse the A4 panorama as a native-ratio header strip on thermal paper. */
+        .ticket-header-art { display: block; position: absolute; z-index: 0; top: 0; left: 0; width: 100%; height: 27.5mm; }
+        .top-header-content { position: relative; z-index: 1; }
+        .brand-grid td { vertical-align: top; }
+        .logo-col { width: 15mm; }
+        .logo { width: 13mm; height: 13mm; display: block; margin: 0 0 0 .6mm; }
+        .brand-copy-col { width: 40mm; padding-left: 1mm; padding-right: 3mm; word-wrap: break-word; }
+        .brand-title { width: 34mm; color: #0a2f57; font-size: 11.5px; font-weight: bold; line-height: 1.02; text-transform: uppercase; word-wrap: break-word; }
+        .brand-legal { width: 34mm; margin-top: .4mm; color: #1b3550; font-size: 7.3px; font-weight: bold; text-transform: uppercase; word-wrap: break-word; }
+        .brand-green { width: 34mm; margin-top: .55mm; color: #1ab09b; font-size: 7.1px; text-transform: uppercase; word-wrap: break-word; }
+        .brand-right-col { width: 21mm; padding-right: 3mm; text-align: right; }
+        .year-chip { display: block; position: absolute; top: 0; right: .6mm; width: 14mm; padding: 1.45mm 1mm; background: #0b5a7a; color: #ffffff; border-radius: 0 2mm 0 2mm; font-size: 9.5px; font-weight: bold; text-align: center; }
+
+        .issuer-meta { margin-top: 1mm; }
+        .issuer-meta td { padding: .65mm 0; vertical-align: middle; }
+        .issuer-icon-col { width: 6.2mm; }
+        .issuer-label-col { width: 10mm; color: #0a2f57; font-weight: bold; }
+        .issuer-value-col { color: #173451; word-wrap: break-word; }
+        .issuer-address-value { padding-left: 1mm !important; }
+        .issuer-icon { display: block; width: auto; height: auto; max-width: 4.6mm; max-height: 4.6mm; margin: 0 auto; }
+        .top-divider { margin-top: 1mm; border-top: 1px solid #d5e0e9; }
+
+        .document-card { margin: 1.5mm 0 1.8mm; border: 1px solid #dce5ec; border-radius: 2mm; background: #f2f6fa; padding: 2.1mm 2mm 2mm; }
+        .document-grid td { vertical-align: middle; }
+        .document-icon-col { width: 16mm; }
+        .document-icon-wrap { width: 12.8mm; height: 12.8mm; border-radius: 12.8mm; background: #0b5a7a; padding: 3.05mm; text-align: center; }
+        .document-icon-wrap img { display: block; width: 100%; height: auto; max-height: 6.7mm; margin: 0 auto; }
+        .document-copy { text-align: center; padding-right: 16mm; }
+        .document-title { color: #0a2f57; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .document-number { margin-top: 1.1mm; color: #18b7a2; font-size: 30px; font-weight: bold; line-height: 1; }
+        .document-datetime { margin-top: 1.35mm; color: #26425d; font-size: 8.5px; }
+
+        .section-card { width: 100%; margin-bottom: 1.5mm; border: 1px solid #dbe5ed; border-radius: 2mm; background: #ffffff; }
+        .section-head { width: 100%; border-radius: 1.7mm 1.7mm 0 0; background: #0b5a7a; color: #ffffff; }
+        .section-head td { vertical-align: middle; }
+        .section-head-icon-col { width: 6.8mm; }
+        .section-head-icon-wrap { width: 4.8mm; height: 4.8mm; background: transparent; border-radius: 0; text-align: center; margin: .7mm 0 .7mm 1mm; }
+        .section-head-icon-wrap img { display: block; width: auto; height: auto; max-width: 4.8mm; max-height: 4.8mm; margin: 0 auto; }
+        .section-head-title { padding: 0 2mm 0 1.2mm; font-size: 9.5px; font-weight: bold; text-align: left; text-transform: uppercase; letter-spacing: .12px; }
+        .section-body { padding: 1.35mm 2.1mm 1.55mm; }
+
+        .info-table td { padding: .9mm 0; border-bottom: 1px solid #e6edf2; }
+        .info-table tr:last-child td { border-bottom: none; }
+        .info-table td:first-child { width: 33%; color: #5b7082; }
+        .info-table td:last-child { color: #173451; font-weight: bold; word-wrap: break-word; }
+
+        .ticket-items { width: 100%; table-layout: fixed; font-size: 8px; }
+        .ticket-items th { padding: 1mm .5mm; border-bottom: 1px solid #dbe5ed; color: #536b7f; font-size: 7px; font-weight: bold; text-align: center; text-transform: uppercase; }
+        .ticket-items td { padding: 1.1mm .5mm; border-bottom: 1px solid #e6edf2; vertical-align: top; }
+        .ticket-items tbody tr { page-break-inside: avoid; }
+        .ticket-items .quantity-col { width: 14%; text-align: center; }
+        .ticket-items .description-col { width: 61%; text-align: left; word-wrap: break-word; }
+        .ticket-items .amount-col { width: 25%; text-align: center; }
+        .item-sku { color: #536b7f; font-size: 7.2px; font-weight: bold; }
+        .item-description { margin-top: .35mm; color: #173451; font-weight: bold; word-wrap: break-word; }
+        .item-meta { margin-top: .5mm; color: #708395; font-size: 7.2px; word-wrap: break-word; }
+        .item-total { color: #173451; font-size: 8.4px; font-weight: bold; word-wrap: break-word; }
+
+        .installments { margin-top: 1mm; font-size: 7px; }
+        .installments th, .installments td { padding: .8mm .4mm; border-bottom: 1px solid #e6edf2; text-align: left; }
+        .installments th:last-child, .installments td:last-child { text-align: right; }
+
+        .totals-table td { padding: .85mm 0; border-bottom: 1px solid #e6edf2; }
+        .totals-table tr:last-child td { border-bottom: none; }
+        .totals-table td:first-child { color: #41596f; }
+        .totals-table td:last-child { text-align: right; color: #173451; }
+        .grand-total { margin-top: 1.35mm; }
+        .grand-total td { background: #19b8a3; color: #ffffff; padding: 2.05mm 2.2mm; font-size: 11px; font-weight: bold; }
+        .grand-total td:first-child { border-radius: 2mm 0 0 2mm; }
+        .grand-total td:last-child { border-radius: 0 2mm 2mm 0; text-align: right; font-size: 14px; }
+        .amount-words { margin-top: 1.35mm; color: #173451; font-size: 8.1px; }
+        .amount-words img { width: 4.2mm; height: 4.2mm; display: inline-block; vertical-align: middle; margin-right: .95mm; }
+
+        .verify-grid td { vertical-align: top; }
+        .verify-qr-col { width: 29mm; }
+        .verify-qr { width: 26mm; height: 26mm; border: 1px solid #18b29d; border-radius: 1.6mm; padding: .55mm; }
+        .verify-copy-col { padding-left: 1.55mm; }
+        .verify-subtitle { color: #0a2f57; font-size: 9.3px; font-weight: bold; text-transform: uppercase; }
+        .verify-copy { margin-top: .65mm; color: #173451; }
+        .verify-url { margin-top: .85mm; color: #0c7cb4; font-size: 7.5px; word-wrap: break-word; }
+        .digest-box { margin-top: 1.45mm; background: #eef4f8; border: 1px solid #d8e4ec; border-radius: 1.6mm; padding: 1.35mm 1.65mm; color: #5c7285; font-size: 8px; word-wrap: break-word; }
+
+        .footer { border-top: 1px dashed #aec1d1; padding-top: 1mm; page-break-inside: avoid; }
+        .footer-grid td { vertical-align: middle; }
+        .footer-left { width: 48%; }
+        .footer-mid { width: 4%; height: 8mm; border-left: 1px solid #c9d7e2; }
+        .footer-right { width: 48%; text-align: right; }
+        .flag { width: 6.6mm; height: 6.6mm; display: inline-block; vertical-align: middle; }
+        .peru-copy { display: inline-block; vertical-align: middle; margin-left: .95mm; color: #173451; }
+        .peru-copy strong { display: block; font-size: 8.5px; }
+        .peru-copy span { display: block; margin-top: .2mm; color: #607588; font-size: 6.4px; line-height: 1.2; }
+        .thanks { width: 32mm; }
+        .footer-legal { margin-top: 1mm; text-align: center; color: #607588; font-size: 7.2px; line-height: 1.38; }
+
+        .center { text-align: center; }
+        .right { text-align: right; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/cpe-thermal-modern :: content}"></div>
+</body>
+</html>

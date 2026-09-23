@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: perubilling
+      POSTGRES_USER: perubilling
+      POSTGRES_PASSWORD: perubilling
+    ports:
+      - "5432:5432"
+    volumes:
+      - perubilling_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perubilling -d perubilling"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      PRODUCTION_GUARD_ENABLED: "false"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/perubilling
+      DATABASE_USERNAME: perubilling
+      DATABASE_PASSWORD: perubilling
+      BOOTSTRAP_ENABLED: "true"
+      BOOTSTRAP_TENANT_NAME: PeruBilling Local
+      BOOTSTRAP_ADMIN_EMAIL: admin@local.test
+      BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
+      JWT_SECRET: bG9jYWwtZGV2LWp3dC1zZWNyZXQtMzItYnl0ZXMtbWluaW11bQ==
+      MASTER_KEY: cGVydWJpbGxpbmctbG9jYWwtbWFzdGVyLWtleS0zMiE=
+      API_KEY_PEPPER: local-api-key-pepper-change-me-32-chars-minimum
+      ARTIFACTS_ROOT: /data/artifacts
+    ports:
+      - "8080:8080"
+    volumes:
+      - perubilling_artifacts:/data/artifacts
+    restart: unless-stopped
+
+volumes:
+  perubilling_pg:
+  perubilling_artifacts:

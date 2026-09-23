@@ -1,0 +1,196 @@
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="content" class="a4-document">
+    <div class="a4-footer">
+    <div class="a4-footer-top">
+            <table>
+                <tr>
+                    <td class="footer-left"><img class="peru-symbol" th:src="${brandAssets.peruFlag}" alt="Bandera Perú" /><span class="peru-title"><strong>PERÚ</strong><span>Comprobantes electrónicos,<br/>un Perú más formal</span></span></td>
+                    <td class="footer-middle"><img class="thanks-art" th:src="${brandAssets.thanks}" alt="Gracias por su preferencia" /></td>
+                    <td class="footer-right">Representación impresa del comprobante<br/>de pago electrónico.</td>
+                </tr>
+            </table>
+    </div>
+    <div class="a4-footer-business"><span th:text="${doc.issuer().businessName()}">PERUBILLING BRUNO TEST SAC</span> · <span th:text="${doc.issueYear()}">2026</span><span class="a4-page-counter"></span></div>
+    <div class="a4-footer-bar">
+            <table>
+                <tr>
+                    <td class="bar-left"><img th:src="${footerIcons.leaf}" alt="" />Facturación electrónica</td>
+                    <td class="bar-middle"><img th:src="${footerIcons.shield}" alt="" />Seguro · Confiable · Siempre disponible</td>
+                    <td class="bar-right"><img th:src="${footerIcons.globe}" alt="" />www.perubilling.com</td>
+                </tr>
+            </table>
+    </div>
+    </div>
+    <div class="a4-hero">
+        <img class="a4-hero-art" th:src="${brandAssets.heroA4}" alt="Vista panorámica de Lima" />
+        <div class="a4-hero-grid">
+            <table>
+                <tr>
+                    <td class="a4-issuer">
+                        <table class="brandline">
+                            <tr>
+                                <td class="brandmark-cell"><img class="brandmark" th:src="${brandLogoDataUri}" alt="Logotipo PeruBilling" /></td>
+                                <td class="brandtext-cell">
+                                    <div class="business-title" th:text="${doc.issuer().tradeName() != '' ? doc.issuer().tradeName() : doc.issuer().businessName()}">PERUBILLING TEST</div>
+                                    <div class="business-legal" th:if="${doc.issuer().tradeName() != '' and doc.issuer().businessName() != doc.issuer().tradeName()}" th:text="${doc.issuer().businessName()}">PERUBILLING BRUNO TEST SAC</div>
+                                    <div class="business-strap">Facturación electrónica</div>
+                                </td>
+                            </tr>
+                        </table>
+                        <table class="issuer-info">
+                            <tr>
+                                <td class="icon-cell"><img th:src="${metaIcons.ruc}" alt="RUC" /></td>
+                                <td class="name-cell">RUC</td>
+                                <td class="value-cell" th:text="${doc.issuer().ruc()}">20654263826</td>
+                            </tr>
+                            <tr>
+                                <td class="icon-cell"><img th:src="${metaIcons.address}" alt="Domicilio" /></td>
+                                <td class="name-cell">Domicilio</td>
+                                <td class="value-cell" th:text="${doc.issuer().address()}">AV. JAVIER PRADO ESTE 1234 · LIMA - LIMA - LIMA</td>
+                            </tr>
+                            <tr th:if="${doc.issuer().ubigeo() != '' or doc.issuer().establishmentCode() != ''}">
+                                <td class="icon-cell"><img th:src="${metaIcons.ubigeo}" alt="Ubigeo" /></td>
+                                <td class="name-cell">Ubigeo</td>
+                                <td class="value-cell"><span th:text="${doc.issuer().ubigeo()}">150101</span><span th:if="${doc.issuer().establishmentCode() != ''}"> · Estab. <span th:text="${doc.issuer().establishmentCode()}">0000</span></span></td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td class="a4-emission">
+                        <table class="emission-top">
+                            <tr>
+                                <td class="emission-slogan-cell"><img class="emission-slogan" th:src="${brandAssets.tagline}" alt="Impulsando negocios en el Perú" /></td>
+                                <td class="emission-year-cell"><span class="year-label" th:text="${doc.issueYear()}">2026</span></td>
+                            </tr>
+                        </table>
+                        <div class="emission-spacer"></div>
+                        <div class="emission-card">
+                            <table>
+                                <tr>
+                                    <td class="emission-icon-cell"><div class="emission-icon-badge"><img th:src="${sectionIcons.document}" alt="Documento" /></div></td>
+                                    <td class="emission-card-content">
+                                        <div class="emission-type" th:text="${doc.documentTitle()}">FACTURA ELECTRÓNICA</div>
+                                        <div class="emission-number" th:text="${doc.number()}">F001-1</div>
+                                        <div class="emission-code">Tipo SUNAT: <strong th:text="${doc.documentSunatCode()}">01</strong></div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <table class="summary-grid">
+        <tr>
+            <td class="left-cell">
+                <div class="panel">
+                    <div class="panel-head"><img th:src="${sectionIcons.customer}" alt="" />Datos del cliente</div>
+                    <div class="panel-body">
+                        <table class="info-table">
+                            <tr><td class="field">Cliente</td><td class="value" th:text="${doc.customer().name() != '' ? doc.customer().name() : 'CONSUMIDOR FINAL'}">CLIENTE BRUNO SAC</td></tr>
+                            <tr><td class="field">Documento</td><td class="value"><span th:text="${doc.customer().documentType()}">RUC</span>: <span th:text="${doc.customer().documentNumber()}">20100066603</span></td></tr>
+                            <tr th:if="${doc.customer().address() != ''}"><td class="field">Dirección</td><td class="value" th:text="${doc.customer().address()}">AV. CLIENTE 456 - LIMA</td></tr>
+                            <tr th:if="${doc.customer().email() != ''}"><td class="field">Email</td><td class="value" th:text="${doc.customer().email()}">pruebas@example.com</td></tr>
+                            <tr th:if="${doc.customer().countryCode() != ''}"><td class="field">País</td><td class="value" th:text="${doc.customer().countryCode() == 'PE' ? 'PE - Perú' : doc.customer().countryCode()}">PE - Perú</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td class="right-cell">
+                <div class="panel">
+                    <div class="panel-head"><img th:src="${sectionIcons.document}" alt="" />Datos del comprobante</div>
+                    <div class="panel-body">
+                        <table class="info-table">
+                            <tr><td class="field">Fecha de emisión</td><td class="value" th:text="${doc.issueDate()}">22/09/2026</td></tr>
+                            <tr th:if="${doc.issueTime() != ''}"><td class="field">Hora de emisión</td><td class="value" th:text="${doc.issueTime()}">10:30:00</td></tr>
+                            <tr><td class="field">Operación</td><td class="value" th:text="${doc.operationLabel()}">Venta interna</td></tr>
+                            <tr><td class="field">Moneda</td><td class="value" th:text="${doc.currency() + ' - ' + doc.currencyLabel()}">PEN - Soles</td></tr>
+                            <tr><td class="field">Forma de pago</td><td class="value" th:text="${doc.payment() != null ? doc.payment().method() : 'CONTADO'}">CONTADO</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="reference-card" th:if="${doc.reference() != null}">
+        <tr>
+            <td class="ref-icon"><img th:src="${sectionIcons.reference}" alt="" /></td>
+            <td class="ref-left"><div class="ref-label">Documento afectado</div><div class="ref-val"><span th:text="${doc.reference().type()}">Factura</span> <strong th:text="${doc.reference().number()}">F001-1</strong></div></td>
+            <td class="ref-right"><div class="ref-label">Motivo</div><div class="ref-val"><span th:if="${doc.reference().reasonCode() != ''}" th:text="${doc.reference().reasonCode() + ' - '}">01 - </span><span th:text="${doc.reference().reason()}">Motivo</span></div></td>
+        </tr>
+    </table>
+
+    <table class="line-items">
+        <thead>
+            <tr>
+                <th class="no">#</th><th class="sku">Código</th><th class="description">Descripción</th>
+                <th class="quantity">Cant.</th><th class="unit">Unidad</th>
+                <th class="price">V. Unitario</th><th class="discount">Dscto.</th><th class="amount">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="item : ${doc.items()}">
+                <td class="center" th:text="${item.line()}">1</td>
+                <td class="center" th:text="${item.sku() != '' ? item.sku() : '-'}">BRU-001</td>
+                <td class="description"><span class="item-name" th:text="${item.description()}">Servicio de prueba automatizada Bruno</span><span class="item-code"><span th:if="${item.sku() != ''}">Código: <span th:text="${item.sku()}">BRU-001</span></span><span th:if="${item.sunatProductCode() != ''}"> · SUNAT: <span th:text="${item.sunatProductCode()}">43211503</span></span></span></td>
+                <td class="center" th:text="${item.quantity()}">1</td>
+                <td class="center" th:text="${item.unitCode()}">NIU</td>
+                <td class="center"><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${item.unitPrice()}">118.00</span></td>
+                <td class="center"><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${item.discount()}">0.00</span></td>
+                <td class="center item-amount"><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${item.total()}">118.00</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="payment-totals">
+        <tr>
+            <td class="payment-cell">
+                <div class="panel">
+                    <div class="panel-head"><img th:src="${sectionIcons.payments}" alt="" />Condición de pago</div>
+                    <div class="panel-body">
+                        <table class="payment-table">
+                            <tr><td>Modalidad</td><td th:text="${doc.payment() != null ? doc.payment().method() : 'CONTADO'}">CONTADO</td></tr>
+                            <tr><td>Saldo pendiente</td><td><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${doc.payment() != null and doc.payment().pendingAmount() != '' ? doc.payment().pendingAmount() : '0.00'}">0.00</span></td></tr>
+                        </table>
+                        <table class="installments" th:if="${doc.payment() != null and !doc.payment().installments().isEmpty()}"><thead><tr><th>Cuota</th><th>Vencimiento</th><th>Importe</th></tr></thead><tbody><tr th:each="inst : ${doc.payment().installments()}"><td th:text="${inst.number()}">Cuota 001</td><td th:text="${inst.dueDate()}">30/09/2026</td><td class="right"><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${inst.amount()}">118.00</span></td></tr></tbody></table>
+                        <div class="payment-note">Comprobante emitido con la condición de pago indicada en la operación.</div>
+                    </div>
+                </div>
+            </td>
+            <td class="totals-cell">
+                <div class="panel">
+                    <div class="panel-head"><img th:src="${sectionIcons.totals}" alt="" />Resumen de importes</div>
+                    <div class="panel-body">
+                        <table class="totals-table"><tr th:each="line : ${doc.totals()}"><td th:text="${line.label()}">IGV</td><td><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${line.amount()}">18.00</span></td></tr></table>
+                        <table class="total-banner"><tr><td>TOTAL A PAGAR</td><td><span th:text="${doc.currencySymbol()}">S/</span> <span th:text="${doc.grandTotal()}">118.00</span></td></tr></table>
+                        <div class="words"><img th:src="${metaIcons.money}" alt="" /><strong>SON:</strong> <span th:text="${doc.amountInWords()}">CIENTO DIECIOCHO CON 00/100 SOLES</span></div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="verification">
+        <table>
+            <tr>
+                <td class="copy-col">
+                    <div class="verify-heading"><img th:src="${sectionIcons.document}" alt="" />Documento electrónico</div>
+                    <div class="verify-note">Representación imprimible del CPE. El XML firmado y la CDR, cuando corresponda, son los artefactos electrónicos asociados.</div>
+                    <div class="digest"><strong>DigestValue:</strong><br/><span th:text="${doc.digestValue()}">6mxMEHIhCtFhYRr5c2tRQRNFe1cejwUGXV1QpFhJC8g=</span></div>
+                </td>
+                <td class="qr-col">
+                    <div class="verify-heading"><img th:src="${sectionIcons.validation}" alt="" />Escanee para verificar</div>
+                    <table class="qr-layout">
+                        <tr>
+                            <td class="qr-image-cell"><img class="qr-image" th:src="${doc.qrDataUri()}" alt="Código QR SUNAT" /></td>
+                            <td class="qr-copy-cell"><div class="qr-label">QR SUNAT</div><div class="qr-text">Consulta y descarga del comprobante:</div><div class="qr-url" th:if="${doc.publicAccessUrl() != ''}"><a th:href="${doc.publicAccessUrl()}" th:text="${doc.publicAccessUrl()}">https://...</a></div></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+
+</div>

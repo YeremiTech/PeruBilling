@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${doc.documentTitle() + ' ' + doc.number()}">Comprobante electrónico</title>
+    <style>
+        /* The bottom margin belongs to the footer on every printed page. */
+        @page {
+            size: A4;
+            margin: 7mm 7mm 31mm 7mm;
+            @bottom-center {
+                content: element(a4-footer);
+                vertical-align: bottom;
+            }
+        }
+        html, body { margin: 0; padding: 0; background: #ffffff; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.3; color: #102c4a; }
+        * { box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { vertical-align: top; }
+        .a4-document { background: #ffffff; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .muted { color: #61748a; }
+        .no-break { page-break-inside: avoid; }
+
+        /* Keep the complete hero inside the printable A4 box. The former full-bleed
+           negative margins let OpenHTMLToPDF clip the right edge on some PDF viewers. */
+        .a4-hero { position: relative; margin: 0 0 3.8mm; width: 100%; height: 58mm; background: #ffffff; border-bottom: .35mm solid #dbe7ef; }
+        .a4-hero-art { display: block; position: absolute; left: 0; top: 0; width: 100%; height: 57.65mm; z-index: 0; }
+        .a4-hero-grid { position: relative; z-index: 1; width: 100%; padding: 4mm; }
+        .a4-issuer { width: 60%; padding-right: 3.2mm; }
+        .a4-emission { width: 40%; padding-left: 2mm; }
+        .brandline { margin-bottom: 2.2mm; }
+        .brandmark-cell { width: 26mm; vertical-align: middle; }
+        .brandmark { display: block; width: 24mm; height: 24mm; margin: 0 auto; }
+        .brandtext-cell { vertical-align: middle; padding-left: 1.4mm; }
+        .business-title { color: #0a2e52; font-size: 24px; font-weight: bold; line-height: 1.06; text-transform: uppercase; word-wrap: break-word; }
+        .business-legal { margin-top: 1mm; color: #1c3653; font-size: 10.8px; font-weight: bold; text-transform: uppercase; }
+        .business-strap { margin-top: 1mm; color: #0fae9b; font-size: 10px; text-transform: uppercase; letter-spacing: .35px; }
+        .issuer-info { margin-top: 1.5mm; }
+        .issuer-info tr { page-break-inside: avoid; }
+        .issuer-info td { vertical-align: middle; padding: .95mm 0; line-height: 1.32; }
+        .issuer-info .icon-cell { width: 6.6mm; }
+        .issuer-info .icon-cell img { display: block; width: auto; height: auto; max-width: 5.2mm; max-height: 5.2mm; vertical-align: middle; }
+        .issuer-info .name-cell { width: 19.4mm; font-weight: bold; color: #0c4665; padding-left: 1mm; }
+        .issuer-info .value-cell { color: #163651; font-size: 10.8px; word-wrap: break-word; }
+        .emission-top td { vertical-align: top; }
+        .emission-slogan-cell { width: 69%; }
+        .emission-slogan { display: block; width: 36mm; max-height: 14mm; }
+        .emission-year-cell { width: 31%; text-align: right; }
+        .year-label { display: inline-block; width: 22mm; border-radius: 1.4mm; padding: 2.1mm 0; text-align: center; color: #ffffff; font-size: 13px; font-weight: bold; background: #0b5675; }
+        .emission-spacer { height: 5mm; }
+        .emission-card { width: 100%; background: #ffffff; border: .3mm solid #d7e3ee; border-radius: 2.4mm; padding: 3mm; page-break-inside: avoid; }
+        .emission-card td { vertical-align: middle; }
+        .emission-icon-cell { width: 15.5mm; }
+        .emission-icon-badge { background: #0b5675; border-radius: 11mm; width: 11.5mm; height: 11.5mm; padding: 2.65mm; text-align: center; }
+        .emission-icon-badge img { display: block; width: 100%; height: auto; max-height: 6.2mm; margin: 0 auto; }
+        .emission-card-content { text-align: center; word-wrap: break-word; }
+        .emission-type { color: #0a2e52; font-size: 14px; font-weight: bold; text-transform: uppercase; }
+        .emission-number { margin-top: 1mm; color: #10a995; font-size: 34px; font-weight: bold; line-height: 1; }
+        .emission-code { border-top: .25mm solid #e0eaf2; padding-top: 1mm; margin-top: 1.3mm; font-size: 9px; color: #334c65; }
+
+        /* Solid section colors: gradient backgrounds were dropped by the original PDF renderer. */
+        .summary-grid { margin-bottom: 3.1mm; }
+        .summary-grid .left-cell { width: 50%; padding-right: 1.8mm; }
+        .summary-grid .right-cell { width: 50%; padding-left: 1.8mm; }
+        .panel { border: .3mm solid #d7e4ee; border-radius: 2.2mm; background: #ffffff; page-break-inside: avoid; }
+        .summary-grid .panel { min-height: 53mm; }
+        .payment-totals .panel { min-height: 52mm; }
+        .panel-head { width: 100%; border-radius: 1.9mm 1.9mm 0 0; background: #0b5675; color: #ffffff; font-size: 10.5px; font-weight: bold; padding: 1.9mm 2.8mm; text-transform: uppercase; }
+        .panel-head img { display: inline-block; width: auto; height: auto; max-width: 5.1mm; max-height: 5.1mm; vertical-align: middle; margin-right: 1.6mm; }
+        .panel-body { padding: 1.8mm 2.6mm 2.4mm; }
+        .info-table td { padding: 1.15mm 0; border-bottom: .2mm solid #e5edf4; vertical-align: middle; word-wrap: break-word; }
+        .info-table tr:last-child td { border-bottom: none; }
+        .info-table .field { width: 34%; color: #53677b; }
+        .info-table .value { width: 66%; font-weight: bold; color: #17344f; }
+        .reference-card { margin: 0 0 3mm; padding: 2.2mm 2.8mm; border: .28mm solid #b7dfd7; background: #f1fbf9; page-break-inside: avoid; }
+        .reference-card td { vertical-align: middle; }
+        .ref-icon { width: 7mm; }
+        .ref-icon img { width: 5.5mm; height: 5.5mm; padding: .6mm; background: #0b5675; }
+        .ref-label { color: #0b5675; font-weight: bold; font-size: 7.5px; text-transform: uppercase; }
+        .ref-val { color: #17344f; margin-top: .5mm; }
+        .reference-card .ref-left { width: 48%; }
+        .reference-card .ref-right { width: 45%; border-left: .25mm solid #b7dfd7; padding-left: 2mm; }
+
+        .line-items { margin-bottom: 3.3mm; font-size: 9.5px; }
+        .line-items thead { display: table-header-group; }
+        .line-items th { background: #0b5675; color: #ffffff; padding: 2mm .7mm; font-size: 8.7px; text-align: center; text-transform: uppercase; vertical-align: middle; }
+        .line-items td { text-align: center; vertical-align: middle; padding: 4.2mm .8mm; border-bottom: .2mm solid #e1eaf0; word-wrap: break-word; }
+        .line-items tbody tr:nth-child(even) { background: #f8fbfd; }
+        .line-items tr { page-break-inside: avoid; }
+        .line-items .no { width: 7.5mm; }
+        .line-items .sku { width: 20mm; }
+        .line-items .description { width: 62mm; }
+        .line-items th.description { text-align: center; }
+        .line-items td.description { text-align: left; }
+        .line-items .quantity { width: 13mm; }
+        .line-items .unit { width: 14mm; }
+        .line-items .price { width: 21mm; }
+        .line-items .discount { width: 19mm; }
+        .line-items .amount { width: 22mm; }
+        .item-name { color: #17344f; font-weight: bold; }
+        .item-code { display: block; font-size: 8.2px; margin-top: .5mm; color: #63778b; }
+        .item-amount { color: #079c8a; font-weight: bold; }
+        .payment-totals { margin-bottom: 3.2mm; }
+        .payment-totals .payment-cell { width: 50%; padding-right: 1.8mm; }
+        .payment-totals .totals-cell { width: 50%; padding-left: 1.8mm; }
+        .payment-table td, .totals-table td { padding: 1.05mm 0; vertical-align: middle; border-bottom: .2mm solid #e5edf4; }
+        .payment-table tr:last-child td, .totals-table tr:last-child td { border-bottom: none; }
+        .payment-table td:first-child, .totals-table td:first-child { color: #4e657a; }
+        .payment-table td:last-child, .totals-table td:last-child { font-weight: bold; text-align: right; color: #17344f; }
+        .installments { font-size: 7.3px; margin-top: 1.5mm; }
+        .installments td, .installments th { padding: .8mm .5mm; text-align: left; }
+        .installments thead { background: #edf7f8; }
+        .payment-note { margin-top: 1.4mm; border: .23mm solid #deebf5; background: #f0f6fb; padding: 1.7mm; color: #587189; font-size: 8.3px; }
+        .total-banner { margin-top: 1.4mm; background: #0ab19e; color: #ffffff; }
+        .total-banner td { vertical-align: middle; background: #0ab19e; padding: 2.3mm 2mm; font-weight: bold; font-size: 13px; }
+        .total-banner td:last-child { text-align: right; font-size: 17px; }
+        .words { padding: 1.5mm 0 0; color: #17344f; font-size: 9px; }
+        .words img { width: 4.7mm; height: 4.7mm; display: inline-block; vertical-align: middle; margin-right: .8mm; }
+        .verification { min-height: 54mm; border: .28mm solid #d7e4ee; padding: 3mm; page-break-inside: avoid; }
+        .verification .copy-col { width: 54%; padding-right: 3mm; }
+        .verification .qr-col { width: 46%; padding-left: 9mm; border-left: .25mm solid #d7e4ee; }
+        .verify-heading { color: #0a2e52; font-size: 11.5px; font-weight: bold; text-transform: uppercase; }
+        .verify-heading img { display: inline-block; width: auto; height: auto; max-width: 5.3mm; max-height: 5.3mm; padding: .75mm; margin-right: 1.1mm; vertical-align: middle; background: #0b5675; }
+        .verify-note { margin-top: 1.6mm; color: #425e75; }
+        .digest { margin-top: 1.8mm; background: #eff5fa; padding: 1.6mm; color: #576e83; font-size: 8.2px; word-wrap: break-word; }
+        .qr-layout { margin-top: 1.3mm; }
+        .qr-layout td { vertical-align: top; }
+        .qr-image-cell { width: 38mm; }
+        .qr-image { display: block; width: 34mm; height: 34mm; border: .3mm solid #0ab19e; padding: .7mm; }
+        .qr-copy-cell { padding-left: 2mm; }
+        .qr-label { font-weight: bold; color: #0a2e52; font-size: 10.5px; }
+        .qr-text { margin-top: .7mm; color: #334c64; }
+        .qr-url { color: #0c7ab6; margin-top: 1.2mm; font-size: 8px; word-wrap: break-word; }
+
+        /* A running element occupies the reserved page margin on every page. */
+        .a4-footer { position: running(a4-footer); width: 210mm; height: 31mm; margin-left: -7mm; background: #ffffff; }
+        .a4-footer-top { width: 210mm; height: 20mm; padding: 1mm 7mm; border-top: .22mm dashed #aabfce; background: #ffffff; }
+        .a4-footer-top td { vertical-align: middle; }
+        .footer-left { width: 32%; }
+        .footer-middle { width: 35%; text-align: center; }
+        .footer-right { width: 33%; text-align: right; color: #5a6e83; font-size: 9.3px; }
+        .peru-symbol { width: 8mm; height: 8mm; display: inline-block; vertical-align: middle; }
+        .peru-title { display: inline-block; vertical-align: middle; margin-left: 1.5mm; color: #122f4d; }
+        .peru-title strong { display: block; font-size: 10.5px; }
+        .peru-title span { display: block; margin-top: .2mm; font-size: 7.8px; color: #59728a; }
+        .thanks-art { display: inline-block; width: 45mm; }
+        .a4-footer-business { position: absolute; right: 5mm; top: 14mm; width: 77mm; text-align: right; color: #5a6e83; font-size: 8.3px; }
+        .a4-page-counter:after { content: " · Página " counter(page) " de " counter(pages); }
+        .a4-footer-bar { width: 210mm; height: 11mm; padding: 2.5mm 7mm; background: #0b5675; color: #ffffff; font-size: 10.5px; }
+        .a4-footer-bar td { vertical-align: middle; color: #ffffff; }
+        .bar-left { width: 34%; }
+        .bar-middle { width: 42%; padding-left: 2mm; text-align: left; }
+        .bar-right { width: 24%; text-align: right; }
+        .a4-footer-bar img { width: 5.1mm; height: 5.1mm; display: inline-block; vertical-align: middle; margin-right: 1.3mm; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/cpe-a4-modern :: content}"></div>
+</body>
+</html>

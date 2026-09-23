@@ -1,0 +1,60 @@
+# Build output
+/target/
+/out/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Runtime data
+/data/
+*.log
+logs/
+*.pid
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# IDE metadata
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache/
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.code-workspace
+
+# OS/editor temporary files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.orig
+hs_err_pid*
+.attach_pid*
+
+# Test/coverage output
+.jacoco/
+coverage/
+surefire-reports/
+failsafe-reports/
+
+# Local SUNAT material downloaded for verification
+sunat-resources/xsd/*.xsd
+sunat-resources/rules/*.xsl
+sunat-resources/rules/*.xslt
+sunat-resources/beta-fixtures/cases/*
+!sunat-resources/beta-fixtures/cases/.gitkeep

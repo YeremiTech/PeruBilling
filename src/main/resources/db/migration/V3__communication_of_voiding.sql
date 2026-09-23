@@ -1,0 +1,26 @@
+CREATE TABLE voiding_batch (
+    id uuid PRIMARY KEY,
+    tenant_id uuid NOT NULL REFERENCES tenant(id),
+    issuer_id uuid NOT NULL REFERENCES issuer(id),
+    document_id uuid NOT NULL REFERENCES electronic_document(id),
+    reference_date date NOT NULL,
+    generation_date date NOT NULL,
+    sequence_number bigint NOT NULL,
+    identifier varchar(40) NOT NULL,
+    reason varchar(500) NOT NULL,
+    status varchar(30) NOT NULL,
+    ticket varchar(200),
+    attempt_count integer NOT NULL DEFAULT 0,
+    next_retry_at timestamptz,
+    xml_path varchar(1000),
+    signed_xml_path varchar(1000),
+    cdr_path varchar(1000),
+    response_code varchar(50),
+    response_message varchar(2000),
+    created_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    CONSTRAINT uq_voiding_document UNIQUE(tenant_id, document_id),
+    CONSTRAINT uq_voiding_identifier UNIQUE(tenant_id, issuer_id, identifier),
+    CONSTRAINT uq_voiding_sequence UNIQUE(tenant_id, issuer_id, generation_date, sequence_number)
+);
+CREATE INDEX idx_voiding_queue ON voiding_batch(status,next_retry_at,created_at);
